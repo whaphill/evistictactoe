@@ -736,7 +736,16 @@
       const triples = detectTriples(current);
 
       if (triples.length > 0) {
+        // Sort triples to process "new" triples first (those including the placed cell)
+        // This ensures we block cells immediately when we score them
         triples.forEach(({ cells, dirIdx }) => {
+          // Score only if none of the cells are already blocked in this direction
+          // (prevents double-scoring overlapping triples in the same scan)
+          const canScore = cells.every(([tr, tc]) => !board[tr][tc].blockedDirs[dirIdx]);
+
+          if (!canScore) return;
+
+          // Block cells and score immediately to prevent overlapping triples
           cells.forEach(([tr, tc]) => {
             board[tr][tc].blockedDirs[dirIdx] = true;
           });
@@ -753,8 +762,10 @@
           });
         });
 
-        bumpScore(current);
-        renderScore();
+        if (scores[current] > 0) {
+          bumpScore(current);
+          renderScore();
+        }
 
         if (scores[current] >= WIN_SCORE) {
           endGame(current);
