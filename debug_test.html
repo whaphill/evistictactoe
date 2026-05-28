@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>TicTacToe Debug</title>
+  <style>
+    body { background: #0a0a0f; color: #e0e0e0; font-family: monospace; padding: 20px; }
+    #log { white-space: pre-wrap; font-size: 12px; line-height: 1.4; max-height: 80vh; overflow-y: auto; }
+    .log-ok { color: #4ecdc4; }
+    .log-error { color: #ff6b9d; }
+    .log-info { color: #ffd700; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <button onclick="runTests()">Run 10 Game Simulations</button>
+  <div id="log"></div>
+
+<script>
+const WIN_SCORE = 10;
+const BOARD_SIZE = 9;
+const DIRS = [
+  { dr: 0,  dc: 1  },  // 0: horizontal →
+  { dr: 1,  dc: 0  },  // 1: vertical ↓
+  { dr: 1,  dc: 1  },  // 2: diagonal ↘
+  { dr: 1,  dc: -1 },  // 3: diagonal ↗
+];
+
+let log = document.getElementById('log');
+let gameCount = 0;
+let totalTriples = { O: 0, X: 0, byDir: { 0: 0, 1: 0, 2: 0, 3: 0 } };
+let issues = [];
+
+function logMsg(msg, type = '') {
+  const span = document.createElement('span');
+  span.className = type ? 'log-' + type : '';
+  span.textContent = msg + '\n';
+  log.appendChild(span);
+  log.scrollTop = log.scrollHeight;
+}
+
+function initBoard() {
+  return Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => ({
+      value: null,
+      blockedDirs: [false, false, false, false],
+    }))
+  );
+}
+
+function detectTriples(board, player) {
+  const found = [];
+  for (let d = 0; d < 4; d++) {
+    const { dr, dc } = DIRS[d];
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (board[r][c].value !== player) continue;
+        const r1 = r + dr, c1 = c + dc;
+        const r2 = r + 2*dr, c2 = c + 2*dc;
+        if (r2 < 0 || r2 >= BOARD_SIZE || c2 < 0 || c2 >= BOARD_SIZE) continue;
+        if (board[r1][c1].value !== player) continue;
+        if (board[r2][c2].value !== player) continue;
+        if (board[r][c].blockedDirs[d]) continue;
+        if (board[r1][c1].blockedDirs[d]) continue;
+        if (board[r2][c2].blockedDirs[d]) continue;
+        found.push({ cells: [[r,c],[r1,c1],[r2,c2]], dirIdx: d, player });
+      }
+    }
+  }
+  return found;
+}
+
+function simulateGame() {
+  gameCount++;
+  let board = initBoard();
+  let scores = { O: 0, X: 0 };
+  let current = 'O';
+  let moves = 0;
+  let gameTriples = [];
+
+  logMsg(`\n=== Game ${gameCount} ===`, 'info');
+
+  while (scores.O < WIN_SCORE && scores.X < WIN_SCORE && moves < 200) {
+    const triples = detectTriples(board, current);
+
+    // Find all valid moves (empty cells)
+    let validMoves = [];
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (board[r][c].value === null) {
+          validMoves.push([r, c]);
+        }
+      }
+    }
+
+    if (validMoves.length === 0) break;
+
+    // Try to find a move that creates a triple
+    let madeMove = false;
+    for (let i = 0; i < validMoves.length; i++) {
+      const [r, c] = validMoves[i];
+      // Simulate placing mark
+      board[r][c].value = current;
+      const futureTriples = detectTriples(board, current);
+      if (futureTriples.length > 0) {
+        // We made a triple! Log it
+        const newTriples = futureTriples.filter(ft => {
+          return ft.cells.some(cell => cell[0] === r && cell[1] === c);
+        });
+
+        for (const t of newTriples) {
+          gameTriples.push({...t, round: moves + 1});
+          totalTriples[t.player]++;
+          totalTriples.byDir[t.dirIdx]++;
+
+          const dirNames = ['→', '↓', '↘', '↗'];
+          const msg = `  Move ${moves + 1}: ${current} scored at (${r},${c}) - Dir: ${t.dirIdx} ${dirNames[t.dirIdx]} cells=[${t.cells.map(c=>`(${c[0]},${c[1]})`).join(',')}]`;
+          logMsg(msg, t.dirIdx >= 2 ? 'error' : 'ok');
+
+          // Block the direction
+          t.cells.forEach(([tr, tc]) => {
+            board[tr][tc].blockedDirs[t.dirIdx] = true;
+          });
+        }
+
+        if (newTriples.length > 0) {
+          scores[current] += newTriples.length;
+          if (scores[current] >= WIN_SCORE) {
+            logMsg(`  ${current} WINS with score ${scores[current]}!`, 'info');
+            return { winner: current, triples: gameTriples };
+          }
+          madeMove = true;
+          current = current === 'O' ? 'X' : 'O';
+          break;
+        }
+      }
+      // Remove the simulated mark
+      board[r][c].value = null;
+    }
+
+    // If no winning move found, make a random valid move
+    if (!madeMove) {
+      const randomIdx = Math.floor(Math.random() * validMoves.length);
+      const [r, c] = validMoves[randomIdx];
+      board[r][c].value = current;
+      current = current === 'O' ? 'X' : 'O';
+    }
+
+    moves++;
+  }
+
+  // Check for final triples (might score on last move)
+  const finalTriples = detectTriples(board, 'O').concat(detectTriples(board, 'X'));
+  if (finalTriples.length > 0) {
+    logMsg(`  WARNING: Game ended but unfinalized triples: ${finalTriples.length}`, 'error');
+  }
+
+  if (scores.O >= WIN_SCORE) return { winner: 'O', triples: gameTriples };
+  if (scores.X >= WIN_SCORE) return { winner: 'X', triples: gameTriples };
+  return { winner: 'draw', triples: gameTriples };
+}
+
+function runTests() {
+  log.innerHTML = '';
+  gameCount = 0;
+  totalTriples = { O: 0, X: 0, byDir: { 0: 0, 1: 0, 2: 0, 3: 0 } };
+  issues = [];
+
+  logMsg('Starting 10 Game Simulation Debug...\n', 'info');
+
+  for (let i = 0; i < 10; i++) {
+    simulateGame();
+  }
+
+  logMsg('\n=== SUMMARY ===', 'info');
+  logMsg(`Total games: ${gameCount}`, '');
+  logMsg(`Total triples scored: O=${totalTriples.O}, X=${totalTriples.X}`, '');
+  logMsg(`By direction: →=${totalTriples.byDir[0]}, ↓=${totalTriples.byDir[1]}, ↘=${totalTriples.byDir[2]}, ↗=${totalTriples.byDir[3]}`, '');
+
+  // Analyze diagonal issues
+  const diagTotal = totalTriples.byDir[2] + totalTriples.byDir[3];
+  const horizTotal = totalTriples.byDir[0] + totalTriples.byDir[1];
+
+  logMsg(`\nDiagonal triples: ${diagTotal}`, diagTotal === 0 ? 'error' : '');
+  logMsg(`Horizontal+Vertical triples: ${horizTotal}`, '');
+
+  if (diagTotal === 0 && horizTotal > 0) {
+    logMsg('\n!!! DIAGONAL BUG DETECTED: No diagonal triples were scored in 10 games!', 'error');
+    logMsg('This suggests the diagonal detection or line drawing has an issue.', 'error');
+  }
+
+  if (horizTotal > 0 && diagTotal > 0) {
+    logMsg('\nDiagonal triples are being scored (bug might be in LINE DRAWING only).', 'info');
+  }
+
+  // Check ratio
+  if (diagTotal < horizTotal * 0.3) {
+    logMsg('\n!!! DIAGONAL SCORING RATE TOO LOW - possible detection bug', 'error');
+  }
+}
+</script>
+</body>
+</html>

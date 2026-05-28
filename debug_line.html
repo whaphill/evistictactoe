@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Line Debug</title>
+  <style>
+    body { background: #0a0a0f; color: #e0e0e0; font-family: monospace; padding: 20px; }
+    #board-wrapper {
+      position: relative;
+      width: 480px;
+      height: 480px;
+      background: #12121a;
+      border: 1px solid #333;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(9, 1fr);
+      gap: 2px;
+      padding: 6px;
+      width: 100%;
+      height: 100%;
+    }
+    .cell {
+      background: #1a1a2a;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+    #triple-svg {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: calc(100% - 12px);
+      height: calc(100% - 12px);
+      overflow: visible;
+      pointer-events: none;
+    }
+    #log { margin-top: 20px; font-size: 12px; white-space: pre; max-height: 300px; overflow-y: auto; }
+    .ok { color: #4ecdc4; }
+    .err { color: #ff6b9d; }
+  </style>
+</head>
+<body>
+  <h3>Line Drawing Debug</h3>
+  <div id="board-wrapper">
+    <div id="board"></div>
+    <svg id="triple-svg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+  </div>
+  <div id="log"></div>
+  <button onclick="runTest()">Run Test</button>
+
+  <script>
+    const BOARD_SIZE = 9;
+    const BOARD_PADDING = 6;
+    const CELL_GAP = 2;
+
+    const boardEl = document.getElementById('board');
+    const svgEl = document.getElementById('triple-svg');
+    const logEl = document.getElementById('log');
+
+    function log(msg, type='') {
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = msg + '\n';
+      logEl.appendChild(span);
+    }
+
+    // Current drawTripleLine implementation from index.html
+    function calculateLineCoords(cells, dirIdx) {
+      const totalSize = 480; // Simulating boardEl.offsetWidth
+      const gap = 2;
+      const cellSize = (totalSize - (BOARD_SIZE - 1) * gap) / BOARD_SIZE; // ~51.56
+      const startOffset = cellSize / 2;
+      const extend = cellSize * 0.08;
+
+      const toPct = (px) => (px / totalSize) * 100;
+
+      const pts = cells.map(([r, c]) => ({
+        x: toPct(c * (cellSize + gap) + startOffset),
+        y: toPct(r * (cellSize + gap) + startOffset)
+      }));
+
+      let x1, y1, x2, y2;
+
+      if (dirIdx === 0) { // horizontal →
+        y1 = y2 = pts[1].y;
+        x1 = pts[0].x - toPct(extend);
+        x2 = pts[2].x + toPct(extend);
+      } else if (dirIdx === 1) { // vertical ↓
+        x1 = x2 = pts[1].x;
+        y1 = pts[0].y - toPct(extend);
+        y2 = pts[2].y + toPct(extend);
+      } else if (dirIdx === 2) { // diagonal ↘
+        const halfCell = toPct(cellSize / 2 + extend);
+        x1 = pts[0].x - halfCell;
+        y1 = pts[0].y - halfCell;
+        x2 = pts[2].x + halfCell;
+        y2 = pts[2].y + halfCell;
+      } else if (dirIdx === 3) { // diagonal ↗
+        const halfCell = toPct(cellSize / 2 + extend);
+        x1 = pts[0].x - halfCell;
+        y1 = pts[0].y + halfCell;
+        x2 = pts[2].x + halfCell;
+        y2 = pts[2].y - halfCell;
+      }
+
+      return { x1, y1, x2, y2, pts, extend, halfCell: toPct(cellSize / 2 + extend) };
+    }
+
+    function drawDebugLine(cells, dirIdx, player, color) {
+      const coords = calculateLineCoords(cells, dirIdx);
+
+      log(`${player} dirIdx=${dirIdx} cells=${JSON.stringify(cells)}`, 'ok');
+      log(`  pts: ${JSON.stringify(coords.pts)}`, '');
+      log(`  cellSize/2+extend in px = ${51.56/2 + 51.56*0.08:.2f}px`, '');
+      log(`  halfCell in % = ${coords.halfCell:.4f}%`, '');
+      log(`  LINE: (${coords.x1:.2f}%, ${coords.y1:.2f}%) → (${coords.x2:.2f}%, ${coords.y2:.2f}%)`, coords.x1 < 0 || coords.x1 > 100 || coords.x2 < 0 || coords.x2 > 100 ? 'err' : 'ok');
+
+      // Check slope
+      const dx = coords.x2 - coords.x1;
+      const dy = coords.y2 - coords.y1;
+      log(`  Slope: dy/dx = ${dy/dx:.4f} (should be ~1 for ↘, ~-1 for ↗)`, '');
+
+      // Draw line on SVG
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', coords.x1);
+      line.setAttribute('y1', coords.y1);
+      line.setAttribute('x2', coords.x2);
+      line.setAttribute('y2', coords.y2);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', '1');
+      line.setAttribute('stroke-linecap', 'round');
+      svgEl.appendChild(line);
+
+      // Mark cells
+      cells.forEach(([r, c]) => {
+        const idx = r * BOARD_SIZE + c;
+        const cell = boardEl.children[idx];
+        if (cell) cell.textContent = player;
+      });
+    }
+
+    function runTest() {
+      svgEl.innerHTML = '';
+      logEl.innerHTML = '';
+      boardEl.innerHTML = '';
+
+      // Create 9x9 grid
+      for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        boardEl.appendChild(cell);
+      }
+
+      log('=== DIAGONAL LINE DRAWING TEST ===\n', 'ok');
+
+      // Test from Game 1: Dir 3 ↗ cells=[(6,7),(7,6),(8,5)]
+      log('TEST 1: Dir 3 ↗ cells=[(6,7),(7,6),(8,5)]');
+      drawDebugLine([[6,7],[7,6],[8,5]], 3, 'X', '#4ecdc4');
+
+      // Test from Game 1: Dir 2 ↘ cells=[(5,6),(6,7),(7,8)]
+      log('\nTEST 2: Dir 2 ↘ cells=[(5,6),(6,7),(7,8)]');
+      drawDebugLine([[5,6],[6,7],[7,8]], 2, 'O', '#ff6b9d');
+
+      // Test horizontal (control)
+      log('\nTEST 3: Dir 0 → cells=[(3,0),(3,1),(3,2)]');
+      drawDebugLine([[3,0],[3,1],[3,2]], 0, 'O', '#ff6b9d');
+
+      // Test vertical (control)
+      log('\nTEST 4: Dir 1 ↓ cells=[(0,4),(1,4),(2,4)]');
+      drawDebugLine([[0,4],[1,4],[2,4]], 1, 'O', '#ff6b9d');
+
+      // Check if lines go out of bounds
+      log('\n=== COORDINATE BOUNDS CHECK ===', 'ok');
+      const tests = [
+        {cells: [[6,7],[7,6],[8,5]], dir: 3},
+        {cells: [[5,6],[6,7],[7,8]], dir: 2},
+      ];
+
+      tests.forEach(t => {
+        const coords = calculateLineCoords(t.cells, t.dir);
+        const outOfBounds = coords.x1 < 0 || coords.x1 > 100 || coords.y1 < 0 || coords.y1 > 100 ||
+                           coords.x2 < 0 || coords.x2 > 100 || coords.y2 < 0 || coords.y2 > 100;
+        if (outOfBounds) {
+          log(`DIR ${t.dir}: OUT OF BOUNDS! x1=${coords.x1:.2f}, y1=${coords.y1:.2f}, x2=${coords.x2:.2f}, y2=${coords.y2:.2f}`, 'err');
+        } else {
+          log(`DIR ${t.dir}: OK x1=${coords.x1:.2f}, y1=${coords.y1:.2f}, x2=${coords.x2:.2f}, y2=${coords.y2:.2f}`, 'ok');
+        }
+      });
+    }
+
+    runTest();
+  </script>
+</body>
+</html>

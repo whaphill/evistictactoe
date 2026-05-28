@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="eviTicTacToe">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="evi's TicTacToe">
+  <meta name="description" content="3목 틱택토 - 10점 먼저 이기는 사람이 승리">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0a0f' width='180' height='180' rx='40'/><text x='50%25' y='45%25' font-size='90' text-anchor='middle' dominant-baseline='central' fill='%23ff6b9d'>O</text><text x='70%25' y='70%25' font-size='60' text-anchor='middle' dominant-baseline='central' fill='%234ecdc4'>X</text></svg>">
+  <title>evi's TicTacToe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: #0a0a0f;
+      background-image:
+        radial-gradient(ellipse at 20% 80%, rgba(78, 205, 196, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255, 107, 157, 0.03) 0%, transparent 50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #e0e0e0;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+      gap: 1.2rem;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+    }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.5rem, 5vw, 2.2rem);
+      letter-spacing: 0.1em;
+      background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header .subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #555;
+      margin-top: 0.25rem;
+      letter-spacing: 0.05em;
+    }
+
+    #scoreboard {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 0.8rem 1.5rem;
+    }
+    .score-block {
+      text-align: center;
+      min-width: 4rem;
+    }
+    .score-block .mark {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .score-block .mark.o { color: #ff6b9d; }
+    .score-block .mark.x { color: #4ecdc4; }
+    .score-block .pts {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.4);
+      transition: transform 0.15s ease;
+    }
+    .score-block .pts.bump {
+      transform: scale(1.4);
+    }
+    .score-vs {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #444;
+    }
+
+    #turn-indicator {
+      font-size: 0.85rem;
+      color: #666;
+      text-align: center;
+      height: 1.2em;
+    }
+    #turn-indicator .turn-o { color: #ff6b9d; }
+    #turn-indicator .turn-x { color: #4ecdc4; }
+
+    #board-wrapper {
+      position: relative;
+      width: min(92vw, 480px);
+      height: min(92vw, 480px);
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(9, 1fr);
+      gap: 2px;
+      background: #1c1c28;
+      padding: 6px;
+      border-radius: 10px;
+      border: 1px solid #2a2a3a;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+      width: 100%;
+      height: 100%;
+    }
+    .cell {
+      background: #12121a;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 100%;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      aspect-ratio: 1 / 1;
+    }
+    .cell[data-col="2"] { border-right: 2px solid #3a3a4a; }
+    .cell[data-col="5"] { border-right: 2px solid #3a3a4a; }
+    .cell[data-row="2"] { border-bottom: 2px solid #3a3a4a; }
+    .cell[data-row="5"] { border-bottom: 2px solid #3a3a4a; }
+    .cell:first-child { border-top-left-radius: 6px; }
+    .cell:nth-child(9) { border-top-right-radius: 6px; }
+    .cell:nth-child(73) { border-bottom-left-radius: 6px; }
+    .cell:last-child { border-bottom-right-radius: 6px; }
+
+    .cell.O { color: #ff6b9d; text-shadow: 0 0 8px rgba(255,107,157,0.5); }
+    .cell.X { color: #4ecdc4; text-shadow: 0 0 8px rgba(78,205,196,0.5); }
+
+    .cell:not(.occupied):hover { background: #1e1e2e; }
+    .cell.occupied { cursor: not-allowed; }
+
+    .cell.triple-hit {
+      animation: tripleGlow 0.6s ease-out;
+    }
+    @keyframes tripleGlow {
+      0%   { box-shadow: 0 0 0   0px rgba(255,215,0,0.8); }
+      40%  { box-shadow: 0 0 18px 4px rgba(255,215,0,0.8); }
+      100% { box-shadow: 0 0 4px 0px rgba(255,215,0,0.3); }
+    }
+
+    .cell.pop {
+      animation: popIn 0.2s ease-out;
+    }
+    @keyframes popIn {
+      0%   { transform: scale(0); opacity: 0; }
+      70%  { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .cell.shake {
+      animation: shakeAnim 0.2s ease;
+    }
+    @keyframes shakeAnim {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-3px); }
+      75%      { transform: translateX(3px); }
+    }
+
+    #triple-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+    .triple-line {
+      stroke-width: 1;
+      stroke-linecap: round;
+      fill: none;
+      opacity: 0.85;
+    }
+    .triple-line.O {
+      stroke: #ff6b9d;
+    }
+    .triple-line.X {
+      stroke: #4ecdc4;
+    }
+    @keyframes lineAppear {
+      0%   { stroke-dashoffset: 500; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .triple-line.animate {
+      stroke-dasharray: 500;
+      animation: lineAppear 0.4s ease-out forwards;
+    }
+
+    #message {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1rem, 4vw, 1.4rem);
+      font-weight: 700;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    #message.win-o { color: #ff6b9d; text-shadow: 0 0 16px rgba(255,107,157,0.7); }
+    #message.win-x { color: #4ecdc4; text-shadow: 0 0 16px rgba(78,205,196,0.7); }
+    #message.draw  { color: #888; }
+
+    #restart-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      padding: 0.55rem 1.6rem;
+      background: transparent;
+      color: #666;
+      border: 1px solid #2a2a3a;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    #restart-btn:hover {
+      color: #e0e0e0;
+      border-color: #5a5a7a;
+    }
+    #restart-btn:active { transform: scale(0.97); }
+
+    #win-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+      backdrop-filter: blur(4px);
+      z-index: 100;
+    }
+    #win-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #win-overlay .win-text {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      animation: bounceIn 0.5s ease-out;
+    }
+    #win-overlay .win-text.o { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.8); }
+    #win-overlay .win-text.x { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.8); }
+    @keyframes bounceIn {
+      0%   { transform: scale(0.5); opacity: 0; }
+      60%  { transform: scale(1.1); }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+    #win-overlay button {
+      font-family: 'JetBrains Mono', monospace;
+      padding: 0.7rem 2rem;
+      background: #1a1a2e;
+      color: #ffd700;
+      border: 1px solid #ffd700;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.18s;
+      letter-spacing: 0.05em;
+    }
+    #win-overlay button:hover {
+      background: #ffd700;
+      color: #0a0a0f;
+      box-shadow: 0 0 20px rgba(255,215,0,0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>evi's TicTacToe</h1>
+    <p class="subtitle">3목 틱택토 &middot; 10점 먼저 이기는 사람이 승리</p>
+  </header>
+
+  <div id="scoreboard">
+    <div class="score-block">
+      <div class="mark o">O</div>
+      <div class="pts" id="score-o">0</div>
+    </div>
+    <div class="score-vs">:</div>
+    <div class="score-block">
+      <div class="mark x">X</div>
+      <div class="pts" id="score-x">0</div>
+    </div>
+  </div>
+
+  <div id="turn-indicator">
+    <span class="turn-o">Player O</span>의 턴
+  </div>
+
+  <div id="board-wrapper">
+    <div id="board"></div>
+    <svg id="triple-lines" style="position:absolute;top:6px;left:6px;width:calc(100% - 12px);height:calc(100% - 12px);overflow:visible;" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+  </div>
+
+  <div id="message"></div>
+
+  <button id="restart-btn">다시 시작</button>
+
+  <div id="win-overlay">
+    <div class="win-text" id="win-text"></div>
+    <button id="overlay-restart-btn">한 판 더</button>
+  </div>
+
+  <script>
+    const WIN_SCORE   = 10;
+    const BOARD_SIZE  = 9;
+    const TRIPLE_SIZE = 3;
+    const BOARD_PADDING = 6;
+    const CELL_GAP = 2;
+
+    let board   = [];
+    let scores  = { O: 0, X: 0 };
+    let current = 'O';
+    let status  = 'PLAYING';
+
+    const DIRS = [
+      { dr: 0,  dc: 1  },
+      { dr: 1,  dc: 0  },
+      { dr: 1,  dc: 1  },
+      { dr: 1,  dc: -1 },
+    ];
+
+    const boardEl    = document.getElementById('board');
+    const msgEl      = document.getElementById('message');
+    const turnEl     = document.getElementById('turn-indicator');
+    const scoreOEl   = document.getElementById('score-o');
+    const scoreXEl   = document.getElementById('score-x');
+    const restartBtn = document.getElementById('restart-btn');
+    const overlayEl  = document.getElementById('win-overlay');
+    const winTextEl  = document.getElementById('win-text');
+    const overlayBtn = document.getElementById('overlay-restart-btn');
+    const linesSvg   = document.getElementById('triple-lines');
+
+    function init() {
+      board   = Array.from({ length: BOARD_SIZE }, () =>
+        Array.from({ length: BOARD_SIZE }, () => ({
+          value: null,
+          blockedDirs: [false, false, false, false],
+        }))
+      );
+      scores  = { O: 0, X: 0 };
+      current = 'O';
+      status  = 'PLAYING';
+      linesSvg.innerHTML = '';
+      renderBoard();
+      renderScore();
+      renderTurn();
+      msgEl.textContent = '';
+      msgEl.className   = '';
+      overlayEl.classList.remove('show');
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          const val = board[r][c].value;
+          if (val) {
+            cell.textContent = val;
+            cell.classList.add(val, 'occupied');
+          }
+          cell.addEventListener('click', () => handleClick(r, c));
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    function renderScore() {
+      scoreOEl.textContent = scores.O;
+      scoreXEl.textContent = scores.X;
+    }
+
+    function renderTurn() {
+      if (status !== 'PLAYING') return;
+      turnEl.innerHTML = `<span class="turn-${current.toLowerCase()}">Player ${current}</span>의 턴`;
+    }
+
+    function drawTripleLine(cells, dirIdx, player) {
+      const totalSize = boardEl.offsetWidth;
+      const gap = 2;
+      const cellSize = (totalSize - (BOARD_SIZE - 1) * gap) / BOARD_SIZE;
+      const startOffset = cellSize / 2;
+      const extend = cellSize * 0.15;
+
+      const toPct = (px) => (px / totalSize) * 100;
+
+      const pts = cells.map(([r, c]) => ({
+        x: toPct(c * (cellSize + gap) + startOffset),
+        y: toPct(r * (cellSize + gap) + startOffset)
+      }));
+
+      let x1, y1, x2, y2;
+
+      if (dirIdx === 0) { // horizontal →
+        y1 = y2 = pts[1].y;
+        x1 = pts[0].x - toPct(extend);
+        x2 = pts[2].x + toPct(extend);
+      } else if (dirIdx === 1) { // vertical ↓
+        x1 = x2 = pts[1].x;
+        y1 = pts[0].y - toPct(extend);
+        y2 = pts[2].y + toPct(extend);
+      } else if (dirIdx === 2) { // diagonal ↘
+        // Line from upper-left corner of first cell to lower-right corner of last cell
+        const dx = pts[2].x - pts[0].x;
+        const dy = pts[2].y - pts[0].y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const ux = dx / len, uy = dy / len;
+        const cellExtent = toPct(cellSize / 2 + extend);
+        x1 = pts[0].x - ux * cellExtent;
+        y1 = pts[0].y - uy * cellExtent;
+        x2 = pts[2].x + ux * cellExtent;
+        y2 = pts[2].y + uy * cellExtent;
+      } else if (dirIdx === 3) { // diagonal ↗
+        // Line from upper-right to lower-left
+        const dx = pts[2].x - pts[0].x;
+        const dy = pts[2].y - pts[0].y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const ux = dx / len, uy = dy / len;
+        const cellExtent = toPct(cellSize / 2 + extend);
+        x1 = pts[0].x - ux * cellExtent;
+        y1 = pts[0].y - uy * cellExtent;
+        x2 = pts[2].x + ux * cellExtent;
+        y2 = pts[2].y + uy * cellExtent;
+      }
+
+      // Clamp coordinates to 0-100 range to prevent SVG clipping
+      x1 = Math.max(0, Math.min(100, x1));
+      y1 = Math.max(0, Math.min(100, y1));
+      x2 = Math.max(0, Math.min(100, x2));
+      y2 = Math.max(0, Math.min(100, y2));
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('class', `triple-line ${player} animate`);
+
+      linesSvg.appendChild(line);
+    }
+
+    function handleClick(r, c) {
+      if (status === 'GAME_OVER') return;
+      if (board[r][c].value !== null) {
+        const idx = r * BOARD_SIZE + c;
+        const cell = boardEl.children[idx];
+        cell.classList.remove('shake');
+        void cell.offsetWidth;
+        cell.classList.add('shake');
+        setTimeout(() => cell.classList.remove('shake'), 250);
+        return;
+      }
+      placeMark(r, c);
+    }
+
+    function placeMark(r, c) {
+      board[r][c].value = current;
+      const idx = r * BOARD_SIZE + c;
+      const cell = boardEl.children[idx];
+      cell.textContent = current;
+      cell.classList.add(current, 'pop', 'occupied');
+      setTimeout(() => cell.classList.remove('pop'), 220);
+
+      const triples = detectTriples(current);
+
+      if (triples.length > 0) {
+        triples.forEach(({ cells, dirIdx }) => {
+          cells.forEach(([tr, tc]) => {
+            board[tr][tc].blockedDirs[dirIdx] = true;
+          });
+
+          scores[current] += 1;
+
+          drawTripleLine(cells, dirIdx, current);
+
+          cells.forEach(([tr, tc]) => {
+            const ti = tr * BOARD_SIZE + tc;
+            const tcEl = boardEl.children[ti];
+            tcEl.classList.add('triple-hit');
+            setTimeout(() => tcEl.classList.remove('triple-hit'), 700);
+          });
+        });
+
+        bumpScore(current);
+        renderScore();
+
+        if (scores[current] >= WIN_SCORE) {
+          endGame(current);
+          return;
+        }
+      }
+
+      current = current === 'O' ? 'X' : 'O';
+      renderTurn();
+    }
+
+    function bumpScore(player) {
+      const el = player === 'O' ? scoreOEl : scoreXEl;
+      el.classList.add('bump');
+      setTimeout(() => el.classList.remove('bump'), 200);
+    }
+
+    function detectTriples(player) {
+      const found = [];
+
+      for (let d = 0; d < 4; d++) {
+        const { dr, dc } = DIRS[d];
+
+        for (let r = 0; r < BOARD_SIZE; r++) {
+          for (let c = 0; c < BOARD_SIZE; c++) {
+            if (board[r][c].value !== player) continue;
+
+            const r1 = r + dr,  c1 = c + dc;
+            const r2 = r + 2*dr, c2 = c + 2*dc;
+
+            if (r2 < 0 || r2 >= BOARD_SIZE || c2 < 0 || c2 >= BOARD_SIZE) continue;
+            if (board[r1][c1].value !== player) continue;
+            if (board[r2][c2].value !== player) continue;
+            if (board[r][c].blockedDirs[d])     continue;
+            if (board[r1][c1].blockedDirs[d])   continue;
+            if (board[r2][c2].blockedDirs[d])   continue;
+
+            found.push({ cells: [[r,c],[r1,c1],[r2,c2]], dirIdx: d });
+          }
+        }
+      }
+
+      return found;
+    }
+
+    function endGame(winner) {
+      status = 'GAME_OVER';
+      turnEl.innerHTML = '';
+      msgEl.textContent = `Player ${winner} WIN!`;
+      msgEl.className   = winner === 'O' ? 'win-o' : 'win-x';
+      winTextEl.textContent = `Player ${winner} WIN!`;
+      winTextEl.className    = winner.toLowerCase();
+      overlayEl.classList.add('show');
+    }
+
+    restartBtn.addEventListener('click', init);
+    overlayBtn.addEventListener('click', init);
+
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW registration failed:', err));
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

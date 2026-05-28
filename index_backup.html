@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>evi's TicTacToe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #0a0a0f;
+      background-image:
+        radial-gradient(ellipse at 20% 80%, rgba(78, 205, 196, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255, 107, 157, 0.03) 0%, transparent 50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #e0e0e0;
+      padding: 1rem;
+      gap: 1.2rem;
+    }
+
+    /* ── HEADER ── */
+    header {
+      text-align: center;
+    }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.5rem, 5vw, 2.2rem);
+      letter-spacing: 0.1em;
+      background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header .subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #555;
+      margin-top: 0.25rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── SCOREBOARD ── */
+    #scoreboard {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      background: #1a1a2e;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 0.8rem 1.5rem;
+    }
+    .score-block {
+      text-align: center;
+      min-width: 4rem;
+    }
+    .score-block .mark {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .score-block .mark.o { color: #ff6b9d; }
+    .score-block .mark.x { color: #4ecdc4; }
+    .score-block .pts {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.4);
+      transition: transform 0.15s ease;
+    }
+    .score-block .pts.bump {
+      transform: scale(1.4);
+    }
+    .score-vs {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #444;
+    }
+
+    /* ── TURN INDICATOR ── */
+    #turn-indicator {
+      font-size: 0.85rem;
+      color: #666;
+      text-align: center;
+      height: 1.2em;
+    }
+    #turn-indicator .turn-o { color: #ff6b9d; }
+    #turn-indicator .turn-x { color: #4ecdc4; }
+
+    /* ── BOARD WRAPPER ── */
+    #board-wrapper {
+      position: relative;
+      width: min(92vw, 480px);
+      aspect-ratio: 1;
+    }
+
+    /* ── BOARD ── */
+    #board {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 2px;
+      background: #1c1c28;
+      padding: 6px;
+      border-radius: 10px;
+      border: 1px solid #2a2a3a;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+      width: 100%;
+      height: 100%;
+    }
+    .cell {
+      background: #12121a;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1rem, 5vw, 1.8rem);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* 3×3 block borders — inner thick lines */
+    .cell[data-col="2"] { border-right: 2px solid #3a3a4a; }
+    .cell[data-col="5"] { border-right: 2px solid #3a3a4a; }
+    .cell[data-row="2"] { border-bottom: 2px solid #3a3a4a; }
+    .cell[data-row="5"] { border-bottom: 2px solid #3a3a4a; }
+    /* corners/rounded edges */
+    .cell:first-child { border-top-left-radius: 6px; }
+    .cell:nth-child(9) { border-top-right-radius: 6px; }
+    .cell:nth-child(73) { border-bottom-left-radius: 6px; }
+    .cell:last-child { border-bottom-right-radius: 6px; }
+
+    .cell.O { color: #ff6b9d; text-shadow: 0 0 8px rgba(255,107,157,0.5); }
+    .cell.X { color: #4ecdc4; text-shadow: 0 0 8px rgba(78,205,196,0.5); }
+
+    .cell:not(.occupied):hover {
+      background: #1e1e2e;
+    }
+    .cell.occupied {
+      cursor: not-allowed;
+    }
+    .cell.triple-hit {
+      animation: tripleGlow 0.6s ease-out;
+    }
+    @keyframes tripleGlow {
+      0%   { box-shadow: 0 0 0   0px rgba(255,215,0,0.8); }
+      40%  { box-shadow: 0 0 18px 4px rgba(255,215,0,0.8); }
+      100% { box-shadow: 0 0 4px 0px rgba(255,215,0,0.3); }
+    }
+
+    .cell.pop {
+      animation: popIn 0.2s ease-out;
+    }
+    @keyframes popIn {
+      0%   { transform: scale(0); opacity: 0; }
+      70%  { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .cell.shake {
+      animation: shakeAnim 0.2s ease;
+    }
+    @keyframes shakeAnim {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-3px); }
+      75%      { transform: translateX(3px); }
+    }
+
+    /* ── TRIPLE LINES SVG ── */
+    #triple-lines {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: calc(100% - 12px);
+      height: calc(100% - 12px);
+      pointer-events: none;
+      overflow: visible;
+    }
+    .triple-line {
+      stroke-width: 4;
+      stroke-linecap: round;
+      fill: none;
+      opacity: 0.7;
+    }
+    .triple-line.O {
+      stroke: #ff6b9d;
+      filter: drop-shadow(0 0 6px rgba(255,107,157,0.8));
+    }
+    .triple-line.X {
+      stroke: #4ecdc4;
+      filter: drop-shadow(0 0 6px rgba(78,205,196,0.8));
+    }
+    @keyframes lineAppear {
+      0%   { stroke-dashoffset: 200; opacity: 0; }
+      20%  { opacity: 0.7; }
+      100% { stroke-dashoffset: 0; opacity: 0.7; }
+    }
+    .triple-line.animate {
+      stroke-dasharray: 200;
+      animation: lineAppear 0.4s ease-out forwards;
+    }
+
+    /* ── MESSAGE ── */
+    #message {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1rem, 4vw, 1.4rem);
+      font-weight: 700;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    #message.win-o { color: #ff6b9d; text-shadow: 0 0 16px rgba(255,107,157,0.7); }
+    #message.win-x { color: #4ecdc4; text-shadow: 0 0 16px rgba(78,205,196,0.7); }
+    #message.draw  { color: #888; }
+
+    /* ── RESTART BUTTON ── */
+    #restart-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      padding: 0.55rem 1.6rem;
+      background: transparent;
+      color: #666;
+      border: 1px solid #2a2a3a;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    #restart-btn:hover {
+      color: #e0e0e0;
+      border-color: #5a5a7a;
+      transform: scale(1.05);
+      box-shadow: 0 0 12px rgba(255,255,255,0.06);
+    }
+    #restart-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* ── WIN OVERLAY ── */
+    #win-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+      backdrop-filter: blur(4px);
+      z-index: 100;
+    }
+    #win-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #win-overlay .win-text {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      animation: bounceIn 0.5s ease-out;
+    }
+    #win-overlay .win-text.o { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.8); }
+    #win-overlay .win-text.x { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.8); }
+    @keyframes bounceIn {
+      0%   { transform: scale(0.5); opacity: 0; }
+      60%  { transform: scale(1.1); }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+    #win-overlay button {
+      font-family: 'JetBrains Mono', monospace;
+      padding: 0.7rem 2rem;
+      background: #1a1a2e;
+      color: #ffd700;
+      border: 1px solid #ffd700;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.18s;
+      letter-spacing: 0.05em;
+    }
+    #win-overlay button:hover {
+      background: #ffd700;
+      color: #0a0a0f;
+      box-shadow: 0 0 20px rgba(255,215,0,0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>evi's TicTacToe</h1>
+    <p class="subtitle">3목 틱택토 &middot; 10점 먼저 이기는 사람이 승리</p>
+  </header>
+
+  <div id="scoreboard">
+    <div class="score-block">
+      <div class="mark o">O</div>
+      <div class="pts" id="score-o">0</div>
+    </div>
+    <div class="score-vs">:</div>
+    <div class="score-block">
+      <div class="mark x">X</div>
+      <div class="pts" id="score-x">0</div>
+    </div>
+  </div>
+
+  <div id="turn-indicator">
+    <span class="turn-o">Player O</span>의 턴
+  </div>
+
+  <div id="board-wrapper">
+    <div id="board"></div>
+    <svg id="triple-lines"></svg>
+  </div>
+
+  <div id="message"></div>
+
+  <button id="restart-btn">다시 시작</button>
+
+  <div id="win-overlay">
+    <div class="win-text" id="win-text"></div>
+    <button id="overlay-restart-btn">한 판 더</button>
+  </div>
+
+  <script>
+    // ── STATE ──────────────────────────────────────────────
+    const WIN_SCORE   = 10;
+    const BOARD_SIZE  = 9;
+    const TRIPLE_SIZE = 3;
+    // direction index: 0=horiz(→), 1=vert(↓), 2=diag↘, 3=diag↗
+
+    // board[r][c] = { value: null|'O'|'X', blockedDirs: [d0,d1,d2,d3] }
+    let board   = [];
+    let scores  = { O: 0, X: 0 };
+    let current = 'O';
+    let status  = 'PLAYING'; // 'PLAYING' | 'GAME_OVER'
+
+    const DIRS = [
+      { dr: 0,  dc: 1  },  // 0: horizontal
+      { dr: 1,  dc: 0  },  // 1: vertical
+      { dr: 1,  dc: 1  },  // 2: diagonal ↘
+      { dr: 1,  dc: -1 },  // 3: diagonal ↗
+    ];
+
+    // ── DOM REFS ──────────────────────────────────────────
+    const boardEl    = document.getElementById('board');
+    const msgEl      = document.getElementById('message');
+    const turnEl     = document.getElementById('turn-indicator');
+    const scoreOEl   = document.getElementById('score-o');
+    const scoreXEl   = document.getElementById('score-x');
+    const restartBtn = document.getElementById('restart-btn');
+    const overlayEl  = document.getElementById('win-overlay');
+    const winTextEl  = document.getElementById('win-text');
+    const overlayBtn = document.getElementById('overlay-restart-btn');
+    const linesSvg   = document.getElementById('triple-lines');
+
+    // ── INIT ──────────────────────────────────────────────
+    function init() {
+      board   = Array.from({ length: BOARD_SIZE }, () =>
+        Array.from({ length: BOARD_SIZE }, () => ({
+          value: null,
+          blockedDirs: [false, false, false, false],
+        }))
+      );
+      scores  = { O: 0, X: 0 };
+      current = 'O';
+      status  = 'PLAYING';
+      linesSvg.innerHTML = '';
+      renderBoard();
+      renderScore();
+      renderTurn();
+      msgEl.textContent = '';
+      msgEl.className   = '';
+      overlayEl.classList.remove('show');
+    }
+
+    // ── RENDER BOARD ──────────────────────────────────────
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          const val = board[r][c].value;
+          if (val) {
+            cell.textContent = val;
+            cell.classList.add(val, 'occupied');
+          }
+          cell.addEventListener('click', () => handleClick(r, c));
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    // ── RENDER SCORE ──────────────────────────────────────
+    function renderScore() {
+      scoreOEl.textContent = scores.O;
+      scoreXEl.textContent = scores.X;
+    }
+
+    // ── RENDER TURN ───────────────────────────────────────
+    function renderTurn() {
+      if (status !== 'PLAYING') return;
+      turnEl.innerHTML = `<span class="turn-${current.toLowerCase()}">Player ${current}</span>의 턴`;
+    }
+
+    // ── DRAW TRIPLE LINE ──────────────────────────────────
+    function drawTripleLine(cells, dirIdx, player) {
+      // Calculate cell positions
+      const boardRect = boardEl.getBoundingClientRect();
+      const wrapperRect = document.getElementById('board-wrapper').getBoundingClientRect();
+
+      // Get cell size
+      const cellCount = BOARD_SIZE * BOARD_SIZE;
+      const totalWidth = boardEl.offsetWidth;
+      const totalHeight = boardEl.offsetHeight;
+      const cellW = (totalWidth - (BOARD_SIZE - 1) * 2) / BOARD_SIZE;
+      const cellH = (totalHeight - (BOARD_SIZE - 1) * 2) / BOARD_SIZE;
+      const gap = 2;
+
+      // Calculate center of each cell in the triple
+      const centers = cells.map(([r, c]) => {
+        const x = c * (cellW + gap) + cellW / 2;
+        const y = r * (cellH + gap) + cellH / 2;
+        return { x, y };
+      });
+
+      // Calculate line start and end points
+      let x1, y1, x2, y2;
+      const margin = 10; // pixels to extend beyond cells
+
+      if (dirIdx === 0) { // horizontal →
+        y1 = y2 = centers[1].y;
+        // First cell left edge to last cell right edge
+        x1 = centers[0].x - cellW / 2 - margin;
+        x2 = centers[2].x + cellW / 2 + margin;
+      } else if (dirIdx === 1) { // vertical ↓
+        x1 = x2 = centers[1].x;
+        y1 = centers[0].y - cellH / 2 - margin;
+        y2 = centers[2].y + cellH / 2 + margin;
+      } else if (dirIdx === 2) { // diagonal ↘
+        // From top-left to bottom-right
+        x1 = centers[0].x - cellW / 2 - margin * 1.2;
+        y1 = centers[0].y - cellH / 2 - margin * 1.2;
+        x2 = centers[2].x + cellW / 2 + margin * 1.2;
+        y2 = centers[2].y + cellH / 2 + margin * 1.2;
+      } else if (dirIdx === 3) { // diagonal ↗
+        // From bottom-left to top-right
+        x1 = centers[0].x - cellW / 2 - margin * 1.2;
+        y1 = centers[0].y + cellH / 2 + margin * 1.2;
+        x2 = centers[2].x + cellW / 2 + margin * 1.2;
+        y2 = centers[2].y - cellH / 2 - margin * 1.2;
+      }
+
+      // Create SVG line element
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('class', `triple-line ${player} animate`);
+
+      linesSvg.appendChild(line);
+    }
+
+    // ── CLICK HANDLER ─────────────────────────────────────
+    function handleClick(r, c) {
+      if (status === 'GAME_OVER') return;
+      if (board[r][c].value !== null) {
+        const idx = r * BOARD_SIZE + c;
+        const cell = boardEl.children[idx];
+        cell.classList.remove('shake');
+        void cell.offsetWidth;
+        cell.classList.add('shake');
+        setTimeout(() => cell.classList.remove('shake'), 250);
+        return;
+      }
+      placeMark(r, c);
+    }
+
+    // ── PLACE MARK ─────────────────────────────────────────
+    function placeMark(r, c) {
+      board[r][c].value = current;
+      const idx = r * BOARD_SIZE + c;
+      const cell = boardEl.children[idx];
+      cell.textContent = current;
+      cell.classList.add(current, 'pop', 'occupied');
+      setTimeout(() => cell.classList.remove('pop'), 220);
+
+      // Detect all valid triples for current player
+      const triples = detectTriples(current);
+
+      if (triples.length > 0) {
+        triples.forEach(({ cells, dirIdx }) => {
+          // Block direction=d for all 3 cells of this triple
+          cells.forEach(([tr, tc]) => {
+            board[tr][tc].blockedDirs[dirIdx] = true;
+          });
+
+          scores[current] += 1;
+
+          // Draw line for this triple
+          drawTripleLine(cells, dirIdx, current);
+
+          cells.forEach(([tr, tc]) => {
+            const ti = tr * BOARD_SIZE + tc;
+            const tcEl = boardEl.children[ti];
+            tcEl.classList.add('triple-hit');
+            setTimeout(() => tcEl.classList.remove('triple-hit'), 700);
+          });
+        });
+
+        bumpScore(current);
+        renderScore();
+
+        if (scores[current] >= WIN_SCORE) {
+          endGame(current);
+          return;
+        }
+      }
+
+      current = current === 'O' ? 'X' : 'O';
+      renderTurn();
+    }
+
+    // ── BUMP SCORE ────────────────────────────────────────
+    function bumpScore(player) {
+      const el = player === 'O' ? scoreOEl : scoreXEl;
+      el.classList.add('bump');
+      setTimeout(() => el.classList.remove('bump'), 200);
+    }
+
+    // ── DETECT TRIPLES (directional block approach) ─────────
+    // Walks each direction, finds every valid cell-triplet.
+    // A triplet at (r,c)-(r+dr,c+dc)-(r+2dr,c+2dc) is valid iff:
+    //   1. All three cells are within bounds
+    //   2. All three cells have the current player's mark
+    //   3. All three cells are NOT blocked in direction d (blockedDirs[d] == false)
+    // Returns array of { cells: [[r,c],[r,c],[r,c]], dirIdx }
+    function detectTriples(player) {
+      const found = [];
+
+      for (let d = 0; d < 4; d++) {
+        const { dr, dc } = DIRS[d];
+
+        for (let r = 0; r < BOARD_SIZE; r++) {
+          for (let c = 0; c < BOARD_SIZE; c++) {
+            // Check the first cell of the triplet
+            if (board[r][c].value !== player) continue;
+
+            const r1 = r + dr,  c1 = c + dc;
+            const r2 = r + 2*dr, c2 = c + 2*dc;
+
+            // Out of bounds
+            if (r2 < 0 || r2 >= BOARD_SIZE || c2 < 0 || c2 >= BOARD_SIZE) continue;
+
+            // All 3 cells must have the same value
+            if (board[r1][c1].value !== player) continue;
+            if (board[r2][c2].value !== player) continue;
+
+            // None of the 3 cells may be blocked in this direction
+            if (board[r][c].blockedDirs[d])  continue;
+            if (board[r1][c1].blockedDirs[d]) continue;
+            if (board[r2][c2].blockedDirs[d]) continue;
+
+            found.push({ cells: [[r,c],[r1,c1],[r2,c2]], dirIdx: d });
+          }
+        }
+      }
+
+      return found;
+    }
+
+    // ── END GAME ─────────────────────────────────────────
+    function endGame(winner) {
+      status = 'GAME_OVER';
+      turnEl.innerHTML = '';
+      msgEl.textContent = `Player ${winner} WIN!`;
+      msgEl.className   = winner === 'O' ? 'win-o' : 'win-x';
+      winTextEl.textContent = `Player ${winner} WIN!`;
+      winTextEl.className    = winner.toLowerCase();
+      overlayEl.classList.add('show');
+    }
+
+    // ── EVENT LISTENERS ───────────────────────────────────
+    restartBtn.addEventListener('click', init);
+    overlayBtn.addEventListener('click', init);
+
+    // ── BOOT ─────────────────────────────────────────────
+    init();
+  </script>
+</body>
+</html>
