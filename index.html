@@ -42,6 +42,174 @@
       overflow-x: hidden;
     }
 
+    /* ─── MAIN SCREEN ─── */
+    #main-screen {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3rem;
+      z-index: 200;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    #main-screen.hidden {
+      opacity: 0;
+      transform: scale(1.1);
+      pointer-events: none;
+    }
+
+    .main-title {
+      text-align: center;
+      animation: titleFloat 3s ease-in-out infinite;
+    }
+    .main-title .title-oxy {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(3rem, 15vw, 6rem);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .main-title .title-ox { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.5); }
+    .main-title .title-xs { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.5); }
+    .main-title .title-tac {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.5rem, 6vw, 2.5rem);
+      background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.3em;
+      margin-top: 0.5rem;
+    }
+    .main-title .title-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: #555;
+      margin-top: 0.8rem;
+      letter-spacing: 0.1em;
+    }
+
+    @keyframes titleFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .main-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: min(80vw, 280px);
+    }
+    .main-btn {
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      border: 2px solid;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.1em;
+      position: relative;
+      overflow: hidden;
+    }
+    .main-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .main-btn:active {
+      transform: scale(0.97);
+    }
+
+    .main-btn.play {
+      border-color: #ffd700;
+      color: #ffd700;
+    }
+    .main-btn.play::before {
+      background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
+    }
+    .main-btn.play:hover::before,
+    .main-btn.play:active::before {
+      opacity: 1;
+    }
+    .main-btn.play:hover {
+      box-shadow: 0 0 20px rgba(255,215,0,0.3);
+    }
+
+    .main-btn.invite {
+      border-color: #9b59b6;
+      color: #9b59b6;
+    }
+    .main-btn.invite::before {
+      background: linear-gradient(135deg, rgba(155,89,182,0.15), rgba(155,89,182,0.05));
+    }
+    .main-btn.invite:hover::before,
+    .main-btn.invite:active::before {
+      opacity: 1;
+    }
+    .main-btn.invite:hover {
+      box-shadow: 0 0 20px rgba(155,89,182,0.3);
+    }
+
+    .main-btn.shop {
+      border-color: #3498db;
+      color: #3498db;
+    }
+    .main-btn.shop::before {
+      background: linear-gradient(135deg, rgba(52,152,219,0.15), rgba(52,152,219,0.05));
+    }
+    .main-btn.shop:hover::before,
+    .main-btn.shop:active::before {
+      opacity: 1;
+    }
+    .main-btn.shop:hover {
+      box-shadow: 0 0 20px rgba(52,152,219,0.3);
+    }
+
+    #restart-row {
+      display: flex;
+      gap: 0.8rem;
+      width: min(92vw, 480px);
+      justify-content: flex-end;
+    }
+    .small-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      padding: 0.45rem 1rem;
+      background: transparent;
+      color: #555;
+      border: 1px solid #2a2a3a;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .small-btn:hover {
+      color: #e0e0e0;
+      border-color: #5a5a7a;
+    }
+    .small-btn:active { transform: scale(0.97); }
+
+    /* ─── GAME SCREEN ─── */
+    #game-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.2rem;
+      width: 100%;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #game-screen.visible {
+      opacity: 1;
+    }
+
     header {
       text-align: center;
     }
@@ -293,43 +461,81 @@
       color: #0a0a0f;
       box-shadow: 0 0 20px rgba(255,215,0,0.4);
     }
+    .overlay-btns {
+      display: flex;
+      gap: 1rem;
+    }
+    #overlay-main-btn {
+      color: #888 !important;
+      border-color: #555 !important;
+    }
+    #overlay-main-btn:hover {
+      background: #2a2a3e !important;
+      color: #e0e0e0 !important;
+      box-shadow: none !important;
+    }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>evi's TicTacToe</h1>
-    <p class="subtitle">3목 틱택토 &middot; 10점 먼저 이기는 사람이 승리</p>
-  </header>
-
-  <div id="scoreboard">
-    <div class="score-block">
-      <div class="mark o">O</div>
-      <div class="pts" id="score-o">0</div>
+  <!-- MAIN SCREEN -->
+  <div id="main-screen">
+    <div class="main-title">
+      <div class="title-oxy">
+        <span class="title-ox">O</span><span class="title-xs">X</span>
+      </div>
+      <div class="title-tac">TICTACTOE</div>
+      <div class="title-sub">3목 틱택토 · 10점 먼저 이기는 사람이 승리</div>
     </div>
-    <div class="score-vs">:</div>
-    <div class="score-block">
-      <div class="mark x">X</div>
-      <div class="pts" id="score-x">0</div>
+    <div class="main-buttons">
+      <button class="main-btn play" id="btn-play">PLAY</button>
+      <button class="main-btn invite" id="btn-invite">INVITE</button>
+      <button class="main-btn shop" id="btn-shop">SHOP</button>
     </div>
   </div>
 
-  <div id="turn-indicator">
-    <span class="turn-o">Player O</span>의 턴
+  <!-- GAME SCREEN -->
+  <div id="game-screen">
+    <header>
+      <h1>evi's TicTacToe</h1>
+      <p class="subtitle">3목 틱택토 &middot; 10점 먼저 이기는 사람이 승리</p>
+    </header>
+
+    <div id="scoreboard">
+      <div class="score-block">
+        <div class="mark o">O</div>
+        <div class="pts" id="score-o">0</div>
+      </div>
+      <div class="score-vs">:</div>
+      <div class="score-block">
+        <div class="mark x">X</div>
+        <div class="pts" id="score-x">0</div>
+      </div>
+    </div>
+
+    <div id="turn-indicator">
+      <span class="turn-o">Player O</span>의 턴
+    </div>
+
+    <div id="board-wrapper">
+      <div id="board"></div>
+      <svg id="triple-lines" style="position:absolute;top:6px;left:6px;width:calc(100% - 12px);height:calc(100% - 12px);overflow:visible;" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div id="message"></div>
+
+    <div id="restart-row">
+      <button id="restart-btn" class="small-btn">⟵ 메인</button>
+      <button id="restart-game-btn" class="small-btn">다시 시작</button>
+    </div>
   </div>
-
-  <div id="board-wrapper">
-    <div id="board"></div>
-    <svg id="triple-lines" style="position:absolute;top:6px;left:6px;width:calc(100% - 12px);height:calc(100% - 12px);overflow:visible;" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
-  </div>
-
-  <div id="message"></div>
-
-  <button id="restart-btn">다시 시작</button>
 
   <div id="win-overlay">
     <div class="win-text" id="win-text"></div>
-    <button id="overlay-restart-btn">한 판 더</button>
+    <div class="overlay-btns">
+      <button id="overlay-restart-btn">한 판 더</button>
+      <button id="overlay-main-btn">메인으로</button>
+    </div>
   </div>
 
   <script>
@@ -351,16 +557,47 @@
       { dr: 1,  dc: -1 },
     ];
 
-    const boardEl    = document.getElementById('board');
-    const msgEl      = document.getElementById('message');
-    const turnEl     = document.getElementById('turn-indicator');
-    const scoreOEl   = document.getElementById('score-o');
-    const scoreXEl   = document.getElementById('score-x');
-    const restartBtn = document.getElementById('restart-btn');
-    const overlayEl  = document.getElementById('win-overlay');
-    const winTextEl  = document.getElementById('win-text');
-    const overlayBtn = document.getElementById('overlay-restart-btn');
-    const linesSvg   = document.getElementById('triple-lines');
+    const mainScreen  = document.getElementById('main-screen');
+    const gameScreen   = document.getElementById('game-screen');
+    const btnPlay      = document.getElementById('btn-play');
+    const btnInvite    = document.getElementById('btn-invite');
+    const btnShop      = document.getElementById('btn-shop');
+    const boardEl      = document.getElementById('board');
+    const msgEl        = document.getElementById('message');
+    const turnEl       = document.getElementById('turn-indicator');
+    const scoreOEl     = document.getElementById('score-o');
+    const scoreXEl      = document.getElementById('score-x');
+    const restartBtn   = document.getElementById('restart-btn');
+    const restartGameBtn = document.getElementById('restart-game-btn');
+    const overlayEl    = document.getElementById('win-overlay');
+    const winTextEl    = document.getElementById('win-text');
+    const overlayBtn     = document.getElementById('overlay-restart-btn');
+    const overlayMainBtn = document.getElementById('overlay-main-btn');
+    const linesSvg     = document.getElementById('triple-lines');
+
+    function showMainScreen() {
+      gameScreen.classList.remove('visible');
+      mainScreen.classList.remove('hidden');
+    }
+
+    function showGameScreen() {
+      mainScreen.classList.add('hidden');
+      gameScreen.classList.add('visible');
+    }
+
+    // Main screen navigation
+    btnPlay.addEventListener('click', () => {
+      init();
+      showGameScreen();
+    });
+
+    btnInvite.addEventListener('click', () => {
+      // prepare only - placeholder for future multiplayer invite feature
+    });
+
+    btnShop.addEventListener('click', () => {
+      // prepare only - placeholder for future shop feature
+    });
 
     function init() {
       board   = Array.from({ length: BOARD_SIZE }, () =>
@@ -573,8 +810,10 @@
       overlayEl.classList.add('show');
     }
 
-    restartBtn.addEventListener('click', init);
-    overlayBtn.addEventListener('click', init);
+    restartBtn.addEventListener('click', showMainScreen);
+    restartGameBtn.addEventListener('click', init);
+    overlayBtn.addEventListener('click', () => { overlayEl.classList.remove('show'); init(); });
+    overlayMainBtn.addEventListener('click', () => { overlayEl.classList.remove('show'); showMainScreen(); });
 
     // PWA Service Worker Registration
     if ('serviceWorker' in navigator) {
