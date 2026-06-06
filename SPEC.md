@@ -252,3 +252,191 @@ const state = {
 | 9 | 승리 시 게임이 멈추고 승리 메시지가 표시된다 |
 | 10 | Restart 버튼 클릭 시 모든 상태가 초기화된다 |
 | 11 | 모바일 터치 입력으로 정상적으로 플레이할 수 있다 |
+
+---
+
+## 8. Multiplayer Specification (P2P over WebRTC)
+
+> 추가 기능: 두 명의 플레이어가 **별도 기기**에서 P2P 연결을 통해 대국한다.
+
+### 8.1 Overview
+
+| Field | Description |
+|---|---|
+| **Connection Type** | Peer-to-Peer (P2P) |
+| **Transport** | WebRTC DataChannel (unordered, unreliable → ordered, reliable) |
+| **Signaling** | QR Code을 통한 Out-of-band SDP 교환 |
+| **Network** | NAT 환경 고려, STUN 서버 사용 (Public STUN) |
+| **Roles** | Host (Offer 생성), Guest (Answer 생성) |
+
+### 8.2 Connection Flow
+
+```
+┌─────────┐                QR Code                 ┌─────────┐
+│  Host   │  ──(Offer SDP)──→  [←Scan]  │  Guest  │
+│(Offerer)│                                       │(Answerer│
+│         │  [←Scan]  ←──(Answer SDP)──  │         │
+└────┬────┘                                └────┬────┘
+     │                                          │
+     │  ICE Candidate 교환 (trickle ice)        │
+     │  ──(항상 DataChannel 개설 후 candidate 전송)──│
+     ▼                                          ▼
+┌──────────────────────────────────────────────────────────┐
+│              RTCPeerConnection (P2P Direct)              │
+│           Host ←────── DataChannel ──────→ Guest        │
+└──────────────────────────────────────────────────────────┘
+```
+
+1. **호스트**는 `RTCPeerConnection`을 생성하고 Offer SDP를 생성 → **QR 코드**로 표시
+2. **게스트**는 QR 코드를 스캔하여 Offer SDP를 수신 → 자신의 Answer SDP 생성 → **QR 코드**로 표시
+3. **호스트**는 게스트의 QR 코드를 스캔하여 Answer SDP를 수신
+4. ICE Candidate는 DataChannel이 open되기 전까지 **메시지로 교환** (trickle ice)
+5. 연결이 수립되면 `datachannel` 이벤트로 양측 채널 확보
+
+### 8.3 Signaling Protocol (QR Code)
+
+#### 8.3.1 QR Payload Format
+SDP 길이가 QR 한도(~2,953 bytes)를 초과할 수 있으므로, **gzip + base64** 인코딩 또는 **chunked QR** (분할)을 고려한다. 초기 버전에서는 간소화를 위해 STUN만 사용하며, 일반적으로 SDP가 한도 내에 들어오도록 compression 적용.
+
+```json
+// 호스트 (Offer)
+{
+  "type": "offer",
+  "sdp": "<base64(gzip(Offer SDP))>",
+  "ver": 1
+}
+
+// 게스트 (Answer)
+{
+  "type": "answer",
+  "sdp": "<base64(gzip(Answer SDP))>",
+  "ver": 1
+}
+```
+
+#### 8.3.2 Display & Scan Cycle
+```
+HOST                              GUEST
+  │                                 │
+  │  [QR: Offer SDP 표시]           │
+  │ ────────────────→              │
+  │                                 │
+  │  [QR: Answer SDP 스캔]          │
+  │ ←───────────────               │
+  │                                 │
+  │  [ICE Candidates 전송 시작]      │
+  │  ───────────────────────────→   │
+  │                                 │
+  │  <────── DataChannel Open ──── │
+```
+
+### 8.4 Message Protocol (DataChannel)
+
+채널 수립 후 모든 게임 메시지는 다음 JSON 포맷을 따른다.
+
+```typescript
+interface MPMessage {
+  type: 'JOIN' | 'MOVE' | 'SYNC' | 'TURN' | 'SCORE' | 'GAME_OVER' | 'RESTART' | 'PING' | 'PONG' | 'ICE';
+  payload: any;
+  seq: number;      // 순번 (重複=無視)
+  ts: number;       // 타임스탬프 (ms)
+  sender: 'host' | 'guest';
+}
+```
+
+| Message | Direction | Description |
+|---|---|---|
+| `JOIN` | Guest → Host | 연결 수립 후 역할 및 닉네임 전송 |
+| `MOVE` | Both | `{r, c}` — 플레이어의 수 위치 |
+| `SYNC` | Host → Guest | 전체 board 상태, scores, current, blockedDirs 동기화 |
+| `TURN` | Both | 턴 변경 알림 (양측 독립 계산 후 cross-check) |
+| `SCORE` | Both | 3목 완성 시 점수 및 해당 셀/방향 정보 전송 |
+| `GAME_OVER` | Host → Guest | 승자 확정 후 게임 종료 |
+| `RESTART` | Both | 재시작 요청, 양측 동의 시 초기화 |
+| `PING` / `PONG` | Both | 5초 간격 Heartbeat, 3회 실패 시 disconnect 처리 |
+| `ICE` | Both | Trickle ICE candidate 교환 (채널 open 전) |
+
+### 8.5 Game State Synchronization
+
+#### 8.5.1 Authority Model
+- **Host**가 최종 권한을 가짐 (Conflict resolution)
+- 각 플레이어는 자신의 `MOVE`를 상대방에게 즉시 전송
+- 수신측은 local rule engine으로 유효성 검증 (Anti-cheat)
+- 불일치 발생 시 Host 상태를 authoritative로 채택
+
+#### 8.5.2 Full Sync
+- 연결 수립 직후 Host는 현재 `board`, `scores`, `current`, `status`를 `SYNC` 메시지로 전송
+- 게스트는 수신 후 자신의 상태를 덮어씀
+- 이후 incremental update만 교환
+
+#### 8.5.3 Turn & Move Sync
+```
+Player A (turn) → places mark → local validation → send MOVE {r, c}
+                                        ↓
+Player B (recv) ← apply MOVE → local validation → update UI
+```
+
+- `currentPlayer`는 양측에서 독립적으로 계산 (O→X→O…)
+- `MOVE` 수신 시 sender가 예상된 currentPlayer인지 검증
+- 예상치 않은 `MOVE`는 무시하고 Host에 `SYNC` 요청
+
+### 8.6 Disconnect & Recovery
+
+| Event | Behavior |
+|---|---|
+| **Ping Timeout** (15s) | 상대방 연결 끊김 알림, 게임 일시 정지 |
+| **ICE Failure** | 자동 renegotiation 시도 (max 3회) |
+| **Explicit Leave** | 상대방이 떠났음을 알리고 메인 화면으로 |
+| **Resume** | 재연결 시 Host의 현재 상태를 `SYNC`로 Full sync |
+
+### 8.7 UI Flow for Multiplayer
+
+```
+┌──────────────┐
+│  Main Screen │
+└──────┬───────┘
+       │ "MULTIPLAYER" 버튼 클릭
+       ▼
+┌─────────────────┐
+│  MP Lobby Screen│
+│  ├─ [Create Room] (Host)  ─→ QR 생성
+│  └─ [Join Room]   (Guest) ─→ QR 스캔
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+┌───────┐ ┌─────────┐
+│ Host  │ │  Guest  │
+│ [Show │ │ [Scan   │
+│ Offer │ │  Offer] │
+│  QR]  │ │         │
+└───┬───┘ └────┬────┘
+    │          │
+│   │ [Scan    │
+│   │ Answer]  │
+│   │          │
+│   ▼          ▼
+│ ┌───────────────┐
+│ │  Connected!   │
+│ │ Game Screen   │
+│ │ (with sync)   │
+└─┴───────────────┘
+```
+
+### 8.8 Security Considerations
+
+- **Anti-cheat**: 모든 `MOVE`는 수신측에서 3목 규칙 검증
+- **Replay attack**: `seq` 번호로 중복 메시지 필터링
+- **Man-in-the-middle**: QR 코드를 직접 스캔하므로, 네트워크 중간자는 없음 (빠른 연결 전까지)
+- **Rate limiting**: 1초당 1개 이상의 `MOVE`는 reject
+
+---
+
+| # | Criteria |
+|---|---|
+| 12 | 멀티플레이어 버튼 클릭 시 P2P 연결 UI로 전환된다 |
+| 13 | 호스트는 Offer SDP를 QR 코드로 표시할 수 있다 |
+| 14 | 게스트는 QR 코드를 스캔하여 호스트의 Offer를 수신할 수 있다 |
+| 15 | DataChannel 수립 후 실시간으로 양측 보드 상태가 동기화된다 |
+| 16 | 한쪽의 수가 상대방 화면에 지연 없이 반영된다 |
+| 17 | 연결 끊김 시 적절한 안내와 재연합 UI가 제공된다 |
