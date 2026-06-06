@@ -16,6 +16,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <!-- QR Code Generator -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- QR Code Scanner -->
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -102,400 +106,105 @@
       gap: 1rem;
       width: min(80vw, 280px);
     }
-    .main-btn {
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 1.1rem;
-      font-weight: 700;
-      padding: 1rem 2rem;
+
+    /* Multiplayer Setup Screen */
+    #multiplayer-setup {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      z-index: 200;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      padding: 2rem;
+      text-align: center;
+    }
+    #multiplayer-setup.hidden {
+      opacity: 0;
+      transform: scale(1.1);
+      pointer-events: none;
+    }
+
+    #multiplayer-setup h2 {
+      color: #ffd700;
+      margin-bottom: 1rem;
+    }
+
+    #qr-code-display {
+      background: #12121a;
       border-radius: 12px;
-      border: 2px solid;
-      background: transparent;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      letter-spacing: 0.1em;
+      padding: 1rem;
+      width: 200px;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #qr-code-display img {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    #scan-area {
+      width: 100%;
+      max-width: 300px;
+      height: 200px;
+      background: #12121a;
+      border-radius: 12px;
       position: relative;
       overflow: hidden;
     }
-    .main-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transition: opacity 0.2s ease;
+
+    #video-preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
-    .main-btn:active {
+
+    #scan-instructions {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0,0,0,0.7);
+      color: #e0e0e0;
+      padding: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .setup-button {
+      background: transparent;
+      color: #e0e0e0;
+      border: 1px solid #2a2a3a;
+      border-radius: 6px;
+      padding: 0.5rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .setup-button:hover {
+      color: #ffd700;
+      border-color: #5a5a7a;
+      transform: scale(1.05);
+    }
+
+    .setup-button:active {
       transform: scale(0.97);
     }
 
-    .main-btn.play {
-      border-color: #ffd700;
-      color: #ffd700;
-    }
-    .main-btn.play::before {
-      background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
-    }
-    .main-btn.play:hover::before,
-    .main-btn.play:active::before {
-      opacity: 1;
-    }
-    .main-btn.play:hover {
-      box-shadow: 0 0 20px rgba(255,215,0,0.3);
-    }
-
-    .main-btn.invite {
-      border-color: #9b59b6;
-      color: #9b59b6;
-    }
-    .main-btn.invite::before {
-      background: linear-gradient(135deg, rgba(155,89,182,0.15), rgba(155,89,182,0.05));
-    }
-    .main-btn.invite:hover::before,
-    .main-btn.invite:active::before {
-      opacity: 1;
-    }
-    .main-btn.invite:hover {
-      box-shadow: 0 0 20px rgba(155,89,182,0.3);
-    }
-
-    .main-btn.shop {
-      border-color: #3498db;
-      color: #3498db;
-    }
-    .main-btn.shop::before {
-      background: linear-gradient(135deg, rgba(52,152,219,0.15), rgba(52,152,219,0.05));
-    }
-    .main-btn.shop:hover::before,
-    .main-btn.shop:active::before {
-      opacity: 1;
-    }
-    .main-btn.shop:hover {
-      box-shadow: 0 0 20px rgba(52,152,219,0.3);
-    }
-
-    #restart-row {
-      display: flex;
-      gap: 0.8rem;
-      width: min(92vw, 480px);
-      justify-content: flex-end;
-    }
-    .small-btn {
+    #connection-status {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      letter-spacing: 0.06em;
-      padding: 0.45rem 1rem;
-      background: transparent;
-      color: #555;
-      border: 1px solid #2a2a3a;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.18s ease;
-    }
-    .small-btn:hover {
-      color: #e0e0e0;
-      border-color: #5a5a7a;
-    }
-    .small-btn:active { transform: scale(0.97); }
-
-    /* ─── GAME SCREEN ─── */
-    #game-screen {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.2rem;
-      width: 100%;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    #game-screen.visible {
-      opacity: 1;
-    }
-
-    header {
-      text-align: center;
-    }
-    header h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(1.5rem, 5vw, 2.2rem);
-      letter-spacing: 0.1em;
-      background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    header .subtitle {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: #555;
-      margin-top: 0.25rem;
-      letter-spacing: 0.05em;
-    }
-
-    #scoreboard {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      background: #1a1a2e;
-      border: 1px solid #2a2a3a;
-      border-radius: 12px;
-      padding: 0.8rem 1.5rem;
-    }
-    .score-block {
-      text-align: center;
-      min-width: 4rem;
-    }
-    .score-block .mark {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.4rem;
-      font-weight: 700;
-    }
-    .score-block .mark.o { color: #ff6b9d; }
-    .score-block .mark.x { color: #4ecdc4; }
-    .score-block .pts {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: #ffd700;
-      text-shadow: 0 0 10px rgba(255,215,0,0.4);
-      transition: transform 0.15s ease;
-    }
-    .score-block .pts.bump {
-      transform: scale(1.4);
-    }
-    .score-vs {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: #444;
-    }
-
-    #turn-indicator {
-      font-size: 0.85rem;
-      color: #666;
-      text-align: center;
-      height: 1.2em;
-    }
-    #turn-indicator .turn-o { color: #ff6b9d; }
-    #turn-indicator .turn-x { color: #4ecdc4; }
-
-    #board-wrapper {
-      position: relative;
-      width: min(92vw, 480px);
-      height: min(92vw, 480px);
-    }
-
-    #board {
-      display: grid;
-      grid-template-columns: repeat(9, 1fr);
-      grid-template-rows: repeat(9, 1fr);
-      gap: 2px;
-      background: #1c1c28;
-      padding: 6px;
-      border-radius: 10px;
-      border: 1px solid #2a2a3a;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
-      width: 100%;
-      height: 100%;
-    }
-    .cell {
-      background: #12121a;
-      border-radius: 3px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 100%;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.12s ease;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      aspect-ratio: 1 / 1;
-    }
-    .cell[data-col="2"] { border-right: 2px solid #3a3a4a; }
-    .cell[data-col="5"] { border-right: 2px solid #3a3a4a; }
-    .cell[data-row="2"] { border-bottom: 2px solid #3a3a4a; }
-    .cell[data-row="5"] { border-bottom: 2px solid #3a3a4a; }
-    .cell:first-child { border-top-left-radius: 6px; }
-    .cell:nth-child(9) { border-top-right-radius: 6px; }
-    .cell:nth-child(73) { border-bottom-left-radius: 6px; }
-    .cell:last-child { border-bottom-right-radius: 6px; }
-
-    .cell.O { color: #ff6b9d; text-shadow: 0 0 8px rgba(255,107,157,0.5); }
-    .cell.X { color: #4ecdc4; text-shadow: 0 0 8px rgba(78,205,196,0.5); }
-
-    .cell:not(.occupied):hover { background: #1e1e2e; }
-    .cell.occupied { cursor: not-allowed; }
-
-    .cell.triple-hit {
-      animation: tripleGlow 0.6s ease-out;
-    }
-    @keyframes tripleGlow {
-      0%   { box-shadow: 0 0 0   0px rgba(255,215,0,0.8); }
-      40%  { box-shadow: 0 0 18px 4px rgba(255,215,0,0.8); }
-      100% { box-shadow: 0 0 4px 0px rgba(255,215,0,0.3); }
-    }
-
-    .cell.pop {
-      animation: popIn 0.2s ease-out;
-    }
-    @keyframes popIn {
-      0%   { transform: scale(0); opacity: 0; }
-      70%  { transform: scale(1.1); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .cell.shake {
-      animation: shakeAnim 0.2s ease;
-    }
-    @keyframes shakeAnim {
-      0%,100% { transform: translateX(0); }
-      25%      { transform: translateX(-3px); }
-      75%      { transform: translateX(3px); }
-    }
-
-    #triple-lines {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      overflow: visible;
-    }
-    .triple-line {
-      stroke-width: 1;
-      stroke-linecap: round;
-      fill: none;
-      opacity: 0.85;
-    }
-    .triple-line.O {
-      stroke: #ff6b9d;
-    }
-    .triple-line.X {
-      stroke: #4ecdc4;
-    }
-    @keyframes lineAppear {
-      0%   { stroke-dashoffset: 500; }
-      100% { stroke-dashoffset: 0; }
-    }
-    .triple-line.animate {
-      stroke-dasharray: 500;
-      animation: lineAppear 0.4s ease-out forwards;
-    }
-
-    #message {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(1rem, 4vw, 1.4rem);
-      font-weight: 700;
-      height: 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-    }
-    #message.win-o { color: #ff6b9d; text-shadow: 0 0 16px rgba(255,107,157,0.7); }
-    #message.win-x { color: #4ecdc4; text-shadow: 0 0 16px rgba(78,205,196,0.7); }
-    #message.draw  { color: #888; }
-
-    #restart-btn {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      letter-spacing: 0.08em;
-      padding: 0.55rem 1.6rem;
-      background: transparent;
-      color: #666;
-      border: 1px solid #2a2a3a;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.18s ease;
-    }
-    #restart-btn:hover {
-      color: #e0e0e0;
-      border-color: #5a5a7a;
-    }
-    #restart-btn:active { transform: scale(0.97); }
-
-    #win-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1.5rem;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s ease;
-      backdrop-filter: blur(4px);
-      z-index: 100;
-    }
-    #win-overlay.show {
-      opacity: 1;
-      pointer-events: all;
-    }
-    #win-overlay .win-text {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(2rem, 8vw, 3.5rem);
-      animation: bounceIn 0.5s ease-out;
-    }
-    #win-overlay .win-text.o { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.8); }
-    #win-overlay .win-text.x { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.8); }
-    @keyframes bounceIn {
-      0%   { transform: scale(0.5); opacity: 0; }
-      60%  { transform: scale(1.1); }
-      100% { transform: scale(1);   opacity: 1; }
-    }
-    #win-overlay button {
-      font-family: 'JetBrains Mono', monospace;
-      padding: 0.7rem 2rem;
-      background: #1a1a2e;
-      color: #ffd700;
-      border: 1px solid #ffd700;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.18s;
-      letter-spacing: 0.05em;
-    }
-    #win-overlay button:hover {
-      background: #ffd700;
-      color: #0a0a0f;
-      box-shadow: 0 0 20px rgba(255,215,0,0.4);
-    }
-    .overlay-btns {
-      display: flex;
-      gap: 1rem;
-    }
-    #overlay-main-btn {
-      color: #888 !important;
-      border-color: #555 !important;
-    }
-    #overlay-main-btn:hover {
-      background: #2a2a3e !important;
-      color: #e0e0e0 !important;
-      box-shadow: none !important;
+      font-size: 0.9rem;
+      min-height: 1.5rem;
     }
   </style>
-</head>
-<body>
-
-  <!-- MAIN SCREEN -->
-  <div id="main-screen">
-    <div class="main-title">
-      <div class="title-oxy">
-        <span class="title-ox">O</span><span class="title-xs">X</span>
-      </div>
-      <div class="title-tac">TICTACTOE</div>
-      <div class="title-sub">3목 틱택토 · 10점 먼저 이기는 사람이 승리</div>
-    </div>
-    <div class="main-buttons">
-      <button class="main-btn play" id="btn-play">PLAY</button>
-      <button class="main-btn invite" id="btn-invite">INVITE</button>
-      <button class="main-btn shop" id="btn-shop">SHOP</button>
-    </div>
-  </div>
-
-  <!-- GAME SCREEN -->
-  <div id="game-screen">
+  <body>
     <header>
       <h1>evi's TicTacToe</h1>
       <p class="subtitle">3목 틱택토 &middot; 10점 먼저 이기는 사람이 승리</p>
@@ -519,323 +228,650 @@
 
     <div id="board-wrapper">
       <div id="board"></div>
-      <svg id="triple-lines" style="position:absolute;top:6px;left:6px;width:calc(100% - 12px);height:calc(100% - 12px);overflow:visible;" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      <svg id="triple-lines"></svg>
     </div>
 
     <div id="message"></div>
 
-    <div id="restart-row">
-      <button id="restart-btn" class="small-btn">⟵ 메인</button>
-      <button id="restart-game-btn" class="small-btn">다시 시작</button>
-    </div>
-  </div>
+    <button id="restart-btn">다시 시작</button>
 
-  <div id="win-overlay">
-    <div class="win-text" id="win-text"></div>
-    <div class="overlay-btns">
+    <div id="win-overlay">
+      <div class="win-text" id="win-text"></div>
       <button id="overlay-restart-btn">한 판 더</button>
-      <button id="overlay-main-btn">메인으로</button>
     </div>
-  </div>
 
+    <!-- Multiplayer Setup UI -->
+    <div id="multiplayer-setup" class="hidden">
+      <h2>멀티플레이 설정</h2>
+      <div id="connection-status">연결 대기 중...</div>
+
+      <!-- Offer/Answer Display -->
+      <div id="qr-code-display">
+        <!-- QR code will be inserted here -->
+      </div>
+
+      <!-- Scan Area -->
+      <div id="scan-area" class="hidden">
+        <video id="video-preview" playsinline></video>
+        <div id="scan-instructions">상대방의 QR 코드를 스캔하세요</div>
+      </div>
+
+      <div class="setup-button" id="btn-regenerate-qr">QR 코드 새로 생성</div>
+      <div class="setup-button" id="btn-switch-role">역할 전환</div>
+    </div>
+
+  </body>
   <script>
-    const WIN_SCORE   = 10;
-    const BOARD_SIZE  = 9;
-    const TRIPLE_SIZE = 3;
-    const BOARD_PADDING = 6;
-    const CELL_GAP = 2;
+    // ── MULTIPLAYER STATE ────────────────────────────────────────
+    let pc = null; // RTCPeerConnection
+    let dataChannel = null;
+    let isOfferer = false;
+    let myTurn = false;
+    let lastSentMove = null;
+    const STUN_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 
-    let board   = [];
-    let scores  = { O: 0, X: 0 };
-    let current = 'O';
-    let status  = 'PLAYING';
+    // Multiplayer UI elements
+    const multiplayerSetup = document.getElementById('multiplayer-setup');
+    const connectionStatus = document.getElementById('connection-status');
+    const qrCodeDisplay = document.getElementById('qr-code-display');
+    const scanArea = document.getElementById('scan-area');
+    const videoPreview = document.getElementById('video-preview');
+    const scanInstructions = document.getElementById('scan-instructions');
+    const btnRegenerateQR = document.getElementById('btn-regenerate-qr');
+    const btnSwitchRole = document.getElementById('btn-switch-role');
 
-    const DIRS = [
-      { dr: 0,  dc: 1  },
-      { dr: 1,  dc: 0  },
-      { dr: 1,  dc: 1  },
-      { dr: 1,  dc: -1 },
-    ];
+    // QR code scanner
+    let html5QrcodeScanner = null;
 
-    const mainScreen  = document.getElementById('main-screen');
-    const gameScreen   = document.getElementById('game-screen');
-    const btnPlay      = document.getElementById('btn-play');
-    const btnInvite    = document.getElementById('btn-invite');
-    const btnShop      = document.getElementById('btn-shop');
-    const boardEl      = document.getElementById('board');
-    const msgEl        = document.getElementById('message');
-    const turnEl       = document.getElementById('turn-indicator');
-    const scoreOEl     = document.getElementById('score-o');
-    const scoreXEl      = document.getElementById('score-x');
-    const restartBtn   = document.getElementById('restart-btn');
-    const restartGameBtn = document.getElementById('restart-game-btn');
-    const overlayEl    = document.getElementById('win-overlay');
-    const winTextEl    = document.getElementById('win-text');
-    const overlayBtn     = document.getElementById('overlay-restart-btn');
-    const overlayMainBtn = document.getElementById('overlay-main-btn');
-    const linesSvg     = document.getElementById('triple-lines');
-
-    function showMainScreen() {
-      gameScreen.classList.remove('visible');
-      mainScreen.classList.remove('hidden');
-    }
-
-    function showGameScreen() {
-      mainScreen.classList.add('hidden');
-      gameScreen.classList.add('visible');
-    }
-
-    // Main screen navigation
-    btnPlay.addEventListener('click', () => {
-      init();
-      showGameScreen();
-    });
-
-    btnInvite.addEventListener('click', () => {
-      // prepare only - placeholder for future multiplayer invite feature
-    });
-
-    btnShop.addEventListener('click', () => {
-      // prepare only - placeholder for future shop feature
-    });
-
-    function init() {
-      board   = Array.from({ length: BOARD_SIZE }, () =>
-        Array.from({ length: BOARD_SIZE }, () => ({
-          value: null,
-          blockedDirs: [false, false, false, false],
-        }))
-      );
-      scores  = { O: 0, X: 0 };
-      current = 'O';
-      status  = 'PLAYING';
-      linesSvg.innerHTML = '';
-      renderBoard();
-      renderScore();
-      renderTurn();
-      msgEl.textContent = '';
-      msgEl.className   = '';
-      overlayEl.classList.remove('show');
-    }
-
-    function renderBoard() {
-      boardEl.innerHTML = '';
-      for (let r = 0; r < BOARD_SIZE; r++) {
-        for (let c = 0; c < BOARD_SIZE; c++) {
-          const cell = document.createElement('div');
-          cell.className = 'cell';
-          cell.dataset.row = r;
-          cell.dataset.col = c;
-          const val = board[r][c].value;
-          if (val) {
-            cell.textContent = val;
-            cell.classList.add(val, 'occupied');
-          }
-          cell.addEventListener('click', () => handleClick(r, c));
-          boardEl.appendChild(cell);
-        }
+    // ── MAIN SCREEN BUTTON HANDLERS ────────────────────────────
+    // Replace the INVITE button handler to start multiplayer
+    document.querySelector('.main-buttons').addEventListener('click', (e) => {
+      if (e.target.textContent.includes('대전') || e.target.textContent.includes('INVITE')) {
+        startMultiplayerAsOfferer();
       }
-    }
+    });
 
-    function renderScore() {
-      scoreOEl.textContent = scores.O;
-      scoreXEl.textContent = scores.X;
-    }
-
-    function renderTurn() {
-      if (status !== 'PLAYING') return;
-      turnEl.innerHTML = `<span class="turn-${current.toLowerCase()}">Player ${current}</span>의 턴`;
-    }
-
-    function drawTripleLine(cells, dirIdx, player) {
-      const totalSize = boardEl.offsetWidth;
-      const gap = 2;
-      const cellSize = (totalSize - (BOARD_SIZE - 1) * gap) / BOARD_SIZE;
-      const startOffset = cellSize / 2;
-      const extend = cellSize * 0.15;
-
-      const toPct = (px) => (px / totalSize) * 100;
-
-      const pts = cells.map(([r, c]) => ({
-        x: toPct(c * (cellSize + gap) + startOffset),
-        y: toPct(r * (cellSize + gap) + startOffset)
-      }));
-
-      let x1, y1, x2, y2;
-
-      if (dirIdx === 0) { // horizontal →
-        y1 = y2 = pts[1].y;
-        x1 = pts[0].x - toPct(extend);
-        x2 = pts[2].x + toPct(extend);
-      } else if (dirIdx === 1) { // vertical ↓
-        x1 = x2 = pts[1].x;
-        y1 = pts[0].y - toPct(extend);
-        y2 = pts[2].y + toPct(extend);
-      } else if (dirIdx === 2) { // diagonal ↘
-        // Line from upper-left corner of first cell to lower-right corner of last cell
-        const dx = pts[2].x - pts[0].x;
-        const dy = pts[2].y - pts[0].y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const ux = dx / len, uy = dy / len;
-        const cellExtent = toPct(cellSize / 2 + extend);
-        x1 = pts[0].x - ux * cellExtent;
-        y1 = pts[0].y - uy * cellExtent;
-        x2 = pts[2].x + ux * cellExtent;
-        y2 = pts[2].y + uy * cellExtent;
-      } else if (dirIdx === 3) { // diagonal ↗
-        // Line from upper-right to lower-left
-        const dx = pts[2].x - pts[0].x;
-        const dy = pts[2].y - pts[0].y;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const ux = dx / len, uy = dy / len;
-        const cellExtent = toPct(cellSize / 2 + extend);
-        x1 = pts[0].x - ux * cellExtent;
-        y1 = pts[0].y - uy * cellExtent;
-        x2 = pts[2].x + ux * cellExtent;
-        y2 = pts[2].y + uy * cellExtent;
+    // ── MULTIPLAYER UI HANDLERS ────────────────────────────────
+    btnRegenerateQR.addEventListener('click', () => {
+      if (isOfferer) {
+        createOffer();
+      } else {
+        createAnswer();
       }
+    });
 
-      // Clamp coordinates to 0-100 range to prevent SVG clipping
-      x1 = Math.max(0, Math.min(100, x1));
-      y1 = Math.max(0, Math.min(100, y1));
-      x2 = Math.max(0, Math.min(100, x2));
-      y2 = Math.max(0, Math.min(100, y2));
-
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x1);
-      line.setAttribute('y1', y1);
-      line.setAttribute('x2', x2);
-      line.setAttribute('y2', y2);
-      line.setAttribute('class', `triple-line ${player} animate`);
-
-      linesSvg.appendChild(line);
-    }
-
-    function handleClick(r, c) {
-      if (status === 'GAME_OVER') return;
-      if (board[r][c].value !== null) {
-        const idx = r * BOARD_SIZE + c;
-        const cell = boardEl.children[idx];
-        cell.classList.remove('shake');
-        void cell.offsetWidth;
-        cell.classList.add('shake');
-        setTimeout(() => cell.classList.remove('shake'), 250);
+    btnSwitchRole.addEventListener('click', () => {
+      isOfferer = !isOfferer;
+      updateUIForRole();
+      if (pc && dataChannel && dataChannel.readyState === 'open') {
+        // If already connected, just switch role label
         return;
       }
-      placeMark(r, c);
+      // Reset connection and start fresh
+      cleanupPeerConnection();
+      if (isOfferer) {
+        createOffer();
+      } else {
+        // Create dummy offer to trigger answer generation
+        createOffer();
+      }
+    });
+
+    // ── MULTIPLAYER FUNCTIONS ───────────────────────────────────
+    function startMultiplayerAsOfferer() {
+      isOfferer = true;
+      showMultiplayerSetup();
+      updateUIForRole();
+      createOffer();
     }
 
-    function placeMark(r, c) {
-      board[r][c].value = current;
-      const idx = r * BOARD_SIZE + c;
-      const cell = boardEl.children[idx];
-      cell.textContent = current;
-      cell.classList.add(current, 'pop', 'occupied');
-      setTimeout(() => cell.classList.remove('pop'), 220);
+    function showMultiplayerSetup() {
+      document.getElementById('main-screen').classList.add('hidden');
+      multiplayerSetup.classList.remove('hidden');
+    }
 
-      const triples = detectTriples(current);
+    function hideMultiplayerSetup() {
+      multiplayerSetup.classList.add('hidden');
+      document.getElementById('main-screen').classList.remove('hidden');
+    }
 
-      if (triples.length > 0) {
-        // Sort triples to process "new" triples first (those including the placed cell)
-        // This ensures we block cells immediately when we score them
-        triples.forEach(({ cells, dirIdx }) => {
-          // Score only if none of the cells are already blocked in this direction
-          // (prevents double-scoring overlapping triples in the same scan)
-          const canScore = cells.every(([tr, tc]) => !board[tr][tc].blockedDirs[dirIdx]);
-
-          if (!canScore) return;
-
-          // Block cells and score immediately to prevent overlapping triples
-          cells.forEach(([tr, tc]) => {
-            board[tr][tc].blockedDirs[dirIdx] = true;
-          });
-
-          scores[current] += 1;
-
-          drawTripleLine(cells, dirIdx, current);
-
-          cells.forEach(([tr, tc]) => {
-            const ti = tr * BOARD_SIZE + tc;
-            const tcEl = boardEl.children[ti];
-            tcEl.classList.add('triple-hit');
-            setTimeout(() => tcEl.classList.remove('triple-hit'), 700);
-          });
-        });
-
-        if (scores[current] > 0) {
-          bumpScore(current);
-          renderScore();
-        }
-
-        if (scores[current] >= WIN_SCORE) {
-          endGame(current);
-          return;
-        }
+    function updateUIForRole() {
+      if (isOfferer) {
+        multiplayerSetup.querySelector('h2').textContent = '초대 코드 생성 중';
+        connectionStatus.textContent = '연결을 기다리는 중...';
+        btnRegenerateQR.textContent = '초대 코드 새로 생성';
+        btnSwitchRole.textContent = '참가자로 전환';
+      } else {
+        multiplayerSetup.querySelector('h2').textContent = '참가 코드 생성 중';
+        connectionStatus.textContent = '초대 코드를 스캔하세요';
+        btnRegenerateQR.textContent = '참가 코드 새로 생성';
+        btnSwitchRole.textContent = '초대자로 전환';
       }
 
-      current = current === 'O' ? 'X' : 'O';
-      renderTurn();
+      // Toggle QR display and scan area
+      if (isOfferer) {
+        qrCodeDisplay.classList.remove('hidden');
+        scanArea.classList.add('hidden');
+        stopQRScanner();
+      } else {
+        qrCodeDisplay.classList.add('hidden');
+        scanArea.classList.remove('hidden');
+        startQRScanner();
+      }
     }
 
-    function bumpScore(player) {
-      const el = player === 'O' ? scoreOEl : scoreXEl;
-      el.classList.add('bump');
-      setTimeout(() => el.classList.remove('bump'), 200);
-    }
+    function createOffer() {
+      if (!isOfferer) return;
 
-    function detectTriples(player) {
-      const found = [];
+      connectionStatus.textContent = '연결 생성 중...';
 
-      for (let d = 0; d < 4; d++) {
-        const { dr, dc } = DIRS[d];
+      // Cleanup existing connection
+      cleanupPeerConnection();
 
-        for (let r = 0; r < BOARD_SIZE; r++) {
-          for (let c = 0; c < BOARD_SIZE; c++) {
-            if (board[r][c].value !== player) continue;
+      // Create peer connection
+      pc = new RTCPeerConnection({ iceServers: STUN_SERVERS });
 
-            const r1 = r + dr,  c1 = c + dc;
-            const r2 = r + 2*dr, c2 = c + 2*dc;
+      // Create data channel
+      dataChannel = pc.createDataChannel('game');
+      setupDataChannel();
 
-            if (r2 < 0 || r2 >= BOARD_SIZE || c2 < 0 || c2 >= BOARD_SIZE) continue;
-            if (board[r1][c1].value !== player) continue;
-            if (board[r2][c2].value !== player) continue;
-            if (board[r][c].blockedDirs[d])     continue;
-            if (board[r1][c1].blockedDirs[d])   continue;
-            if (board[r2][c2].blockedDirs[d])   continue;
-
-            found.push({ cells: [[r,c],[r1,c1],[r2,c2]], dirIdx: d });
-          }
+      // Handle ICE candidates
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('New ICE candidate:', event.candidate);
+          // Candidates will be sent with offer/answer
         }
+      };
+
+      // Handle connection state changes
+      pc.onconnectionstatechange = (event) => {
+        console.log('Connection state:', pc.connectionState);
+        if (pc.connectionState === 'connected') {
+          connectionStatus.textContent = '연결됨! 게임을 시작합니다.';
+          myTurn = true; // Offerer goes first
+          updateTurnIndicator();
+        } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+          connectionStatus.textContent = '연결 오류. 다시 시도해주세요.';
+        }
+      };
+
+      // Handle signaling state changes
+      pc.onsignalingstatechange = (event) => {
+        console.log('Signaling state:', pc.signalingState);
+      };
+
+      // Handle ICE gathering state
+      pc.onicegatheringstatechange = (event) => {
+        console.log('ICE gathering state:', pc.iceGatheringState);
+        if (pc.iceGatheringState === 'complete') {
+          // Gather all candidates and create offer
+          setTimeout(() => {
+            pc.createOffer()
+              .then(offer => {
+                return pc.setLocalDescription(offer);
+              })
+              .then(() => {
+                // Wait a bit more for ICE candidates, then send offer
+                setTimeout(() => {
+                  const offerData = {
+                    type: 'offer',
+                    sdp: pc.localDescription.sdp,
+                    candidates: pc.localDescription ? [] : [] // Simplified for now
+                  };
+                  sendSignalingMessage(offerData);
+                }, 1000);
+              })
+              .catch(handleError);
+          }, 500);
+        }
+      };
+    }
+
+    function createAnswer() {
+      if (isOfferer) return;
+
+      connectionStatus.textContent = '답변 생성 중...';
+
+      // Cleanup existing connection
+      cleanupPeerConnection();
+
+      // Create peer connection
+      pc = new RTCPeerConnection({ iceServers: STUN_SERVERS });
+
+      // Handle incoming data channel
+      pc.ondatachannel = (event) => {
+        dataChannel = event.channel;
+        setupDataChannel();
+      };
+
+      // Handle ICE candidates
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('New ICE candidate:', event.candidate);
+        }
+      };
+
+      // Handle connection state changes
+      pc.onconnectionstatechange = (event) => {
+        console.log('Connection state:', pc.connectionState);
+        if (pc.connectionState === 'connected') {
+          connectionStatus.textContent = '연결됨! 게임을 시작합니다.';
+          myTurn = false; // Answerer goes second
+          updateTurnIndicator();
+        } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+          connectionStatus.textContent = '연결 오류. 다시 시도해주세요.';
+        }
+      };
+
+      // Handle ICE gathering state
+      pc.onicegatheringstatechange = (event) => {
+        console.log('ICE gathering state:', pc.iceGatheringState);
+        if (pc.iceGatheringState === 'complete') {
+          // Create answer
+          setTimeout(() => {
+            pc.createAnswer()
+              .then(answer => {
+                return pc.setLocalDescription(answer);
+              })
+              .then(() => {
+                setTimeout(() => {
+                  const answerData = {
+                    type: 'answer',
+                    sdp: pc.localDescription.sdp,
+                    candidates: []
+                  };
+                  sendSignalingMessage(answerData);
+                }, 1000);
+              })
+              .catch(handleError);
+          }, 500);
+        }
+      };
+    }
+
+    function setupDataChannel() {
+      dataChannel.onopen = () => {
+        console.log('Data channel opened');
+        connectionStatus.textContent = '데이터 채널 준비됨';
+      };
+
+      dataChannel.onclose = () => {
+        console.log('Data channel closed');
+        connectionStatus.textContent = '데이터 채널이 닫혔습니다.';
+      };
+
+      dataChannel.onerror = (error) => {
+        console.error('Data channel error:', error);
+        connectionStatus.textContent = '데이터 채널 오류가 발생했습니다.';
+      };
+
+      dataChannel.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          handleDataChannelMessage(message);
+        } catch (error) {
+          console.error('Error parsing message:', error);
+        }
+      };
+    }
+
+    function handleDataChannelMessage(message) {
+      switch (message.type) {
+        case 'move':
+          handleRemoteMove(message.row, message.col);
+          break;
+        case 'reset':
+          handleRemoteReset();
+          break;
+        case 'turn':
+          // Optional explicit turn signaling
+          break;
+      }
+    }
+
+    function handleRemoteMove(row, col) {
+      // Check if this is our own echoed move
+      if (lastSentMove && lastSentMove.row === row && lastSentMove.col === col) {
+        lastSentMove = null; // Clear the echo
+        return;
       }
 
-      return found;
+      // Apply opponent's move
+      isRemoteMove = true;
+      try {
+        placeMark(row, col);
+      } finally {
+        isRemoteMove = false;
+      }
+
+      // Toggle turn
+      myTurn = true;
+      updateTurnIndicator();
     }
 
-    function endGame(winner) {
-      status = 'GAME_OVER';
-      turnEl.innerHTML = '';
-      msgEl.textContent = `Player ${winner} WIN!`;
-      msgEl.className   = winner === 'O' ? 'win-o' : 'win-x';
-      winTextEl.textContent = `Player ${winner} WIN!`;
-      winTextEl.className    = winner.toLowerCase();
-      overlayEl.classList.add('show');
+    function handleRemoteReset() {
+      init(); // Reset local game state
+      myTurn = false; // Wait for opponent to start
+      updateTurnIndicator();
+      connectionStatus.textContent = '상대방이 게임을 재설정했습니다.';
     }
 
-    restartBtn.addEventListener('click', showMainScreen);
-    restartGameBtn.addEventListener('click', init);
-    overlayBtn.addEventListener('click', () => { overlayEl.classList.remove('show'); init(); });
-    overlayMainBtn.addEventListener('click', () => { overlayEl.classList.remove('show'); showMainScreen(); });
+    function sendMove(row, col) {
+      if (!dataChannel || dataChannel.readyState !== 'open') {
+        console.error('Data channel not ready');
+        return;
+      }
 
-    // PWA Service Worker Registration
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('SW registered'))
-          .catch(err => console.log('SW registration failed:', err));
+      const moveData = {
+        type: 'move',
+        row: row,
+        col: col
+      };
+
+      // Store for echo detection
+      lastSentMove = { row: row, col: col };
+
+      // Send via data channel
+      dataChannel.send(JSON.stringify(moveData));
+
+      // Apply move locally (optimistic update)
+      placeMark(row, col);
+
+      // Toggle turn (we'll toggle back when we receive the echo or opponent's move)
+      myTurn = false;
+      updateTurnIndicator();
+    }
+
+    function sendReset() {
+      if (!dataChannel || dataChannel.readyState !== 'open') {
+        console.error('Data channel not ready');
+        return;
+      }
+
+      const resetData = {
+        type: 'reset'
+      };
+
+      dataChannel.send(JSON.stringify(resetData));
+      init(); // Reset local state
+      myTurn = false;
+      updateTurnIndicator();
+    }
+
+    function sendSignalingMessage(message) {
+      // Convert message to JSON and then to QR code
+      const messageJson = JSON.stringify(message);
+      console.log('Sending signaling message:', messageJson);
+
+      // Generate QR code
+      qrCodeDisplay.innerHTML = ''; // Clear previous QR
+      new QRCode(qrCodeDisplay, {
+        text: messageJson,
+        width: 180,
+        height: 180,
+        colorDark: "#ffd700",
+        colorLight: "#12121a",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      connectionStatus.textContent = isOfferer ?
+        '상대방이 이 QR 코드를 스캔하세요' :
+        '생성된 코드를 상대방에게 보여주세요';
+    }
+
+    function startQRScanner() {
+      // Stop any existing scanner
+      stopQRScanner();
+
+      // Configure QR code scanner
+      html5QrcodeScanner = new Html5Qrcode("video-preview");
+      const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+        console.log('QR code scanned:', decodedText);
+
+        try {
+          const message = JSON.parse(decodedText);
+          handleSignalingMessageReceived(message);
+        } catch (error) {
+          console.error('Error parsing scanned QR code:', error);
+          connectionStatus.textContent = '잘못된 QR 코드입니다. 다시 시도해주세요.';
+        }
+
+        // Stop scanning after successful read
+        stopQRScanner();
+      };
+
+      const config = { fps: 10, qrbox: 250 };
+
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        config,
+        qrCodeSuccessCallback,
+        (errorMessage) => {
+          // Ignore scanning errors, continue trying
+          console.log(`QR scanning error: ${errorMessage}`);
+        }
+      ).catch((err) => {
+        console.error('Unable to start QR scanning:', err);
+        connectionStatus.textContent = '카메라 접근에 실패했습니다. 권한을 확인해주세요.';
       });
     }
 
+    function stopQRScanner() {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().catch((ignore) => {});
+        html5QrcodeScanner = null;
+      }
+    }
+
+    function handleSignalingMessageReceived(message) {
+      console.log('Received signaling message:', message);
+
+      switch (message.type) {
+        case 'offer':
+          handleOffer(message);
+          break;
+        case 'answer':
+          handleAnswer(message);
+          break;
+        default:
+          console.warn('Unknown signaling message type:', message.type);
+      }
+    }
+
+    function handleOffer(offerData) {
+      if (isOfferer) {
+        // We're the offerer receiving an answer
+        handleAnswer(offerData);
+        return;
+      }
+
+      // We're the answerer receiving an offer
+      connectionStatus.textContent = '초대 코드를 처리 중...';
+
+      cleanupPeerConnection();
+      pc = new RTCPeerConnection({ iceServers: STUN_SERVERS });
+
+      pc.ondatachannel = (event) => {
+        dataChannel = event.channel;
+        setupDataChannel();
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('New ICE candidate:', event.candidate);
+        }
+      };
+
+      pc.onconnectionstatechange = (event) => {
+        console.log('Connection state:', pc.connectionState);
+        if (pc.connectionState === 'connected') {
+          connectionStatus.textContent = '연결됨! 게임을 시작합니다.';
+          myTurn = false; // Answerer goes second
+          updateTurnIndicator();
+        } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+          connectionStatus.textContent = '연결 오류. 다시 시도해주세요.';
+        }
+      };
+
+      pc.onicegatheringstatechange = (event) => {
+        if (pc.iceGatheringState === 'complete') {
+          // Set remote description and create answer
+          pc.setRemoteDescription(new RTCSessionDescription(offerData))
+            .then(() => {
+              return pc.createAnswer();
+            })
+            .then(answer => {
+              return pc.setLocalDescription(answer);
+            })
+            .then(() => {
+              setTimeout(() => {
+                const answerData = {
+                  type: 'answer',
+                  sdp: pc.localDescription.sdp,
+                  candidates: []
+                };
+                sendSignalingMessage(answerData);
+              }, 1000);
+            })
+            .catch(handleError);
+        }
+      };
+    }
+
+    function handleAnswer(answerData) {
+      if (!isOfferer) {
+        // We're the answerer receiving an offer (shouldn't happen in normal flow)
+        handleOffer(answerData);
+        return;
+      }
+
+      // We're the offerer receiving an answer
+      connectionStatus.textContent = '답변을 처리 중...';
+
+      pc.setRemoteDescription(new RTCSessionDescription(answerData))
+        .then(() => {
+          connectionStatus.textContent = '연결이 설정되었습니다.';
+        })
+        .catch(handleError);
+    }
+
+    function handleError(error) {
+      console.error('WebRTC error:', error);
+      connectionStatus.textContent = '오류가 발생했습니다: ' + error.message;
+    }
+
+    function cleanupPeerConnection() {
+      stopQRScanner();
+
+      if (dataChannel) {
+        dataChannel.close();
+        dataChannel = null;
+      }
+
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+    }
+
+    function updateTurnIndicator() {
+      const turnEl = document.getElementById('turn-indicator');
+      if (!turnEl) return;
+
+      if (status === 'GAME_OVER') {
+        turnEl.innerHTML = '';
+        return;
+      }
+
+      if (myTurn) {
+        turnEl.innerHTML = `<span class="turn-${current.toLowerCase()}">Player ${current}</span>의 턴`;
+      } else {
+        turnEl.innerHTML = `<span class="turn-${current === 'O' ? 'x' : 'o'}">상대방</span>의 턴`;
+      }
+    }
+
+    // ── OVERRIDE EXISTING FUNCTIONS FOR MULTIPLAYER ─────────────
+    // Override placeMark to handle multiplayer
+    const originalPlaceMark = placeMark;
+    function placeMark(r, c) {
+      // In multiplayer mode, we only place marks when it's our turn
+      // or when receiving a move from opponent
+      if (isMultiplayerMode() && !myTurn && !isRemoteMove) {
+        // Not our turn and not processing remote move - ignore
+        return;
+      }
+
+      // Call original placeMark
+      originalPlaceMark(r, c);
+    }
+
+    // We need to track if we're processing a remote move to avoid double-processing
+    let isRemoteMove = false;
+
+    // Override the original placeMark to add multiplayer awareness
+    // Actually, let's modify the existing placeMark function directly in the script
+    // Instead of overriding, we'll modify the click handler
+
+    // ── INITIALIZATION ────────────────────────────────────────
+    // Replace the existing init function to handle multiplayer reset
+    const originalInit = init;
+    function init() {
+      originalInit();
+      // Reset multiplayer state when game is reset
+      myTurn = false;
+      lastSentMove = null;
+      updateTurnIndicator();
+    }
+
+    // Override the click handler for multiplayer
+    const originalHandleClick = handleClick;
+    function handleClick(r, c) {
+      if (isMultiplayerMode()) {
+        // In multiplayer mode, only allow clicks when it's our turn
+        if (!myTurn) {
+          return;
+        }
+
+        // Check if cell is empty
+        if (board[r][c].value !== null) {
+          const idx = r * BOARD_SIZE + c;
+          const cell = boardEl.children[idx];
+          cell.classList.remove('shake');
+          void cell.offsetWidth;
+          cell.classList.add('shake');
+          setTimeout(() => cell.classList.remove('shake'), 250);
+          return;
+        }
+
+        // Send move to opponent
+        sendMove(r, c);
+        return;
+      }
+
+      // Single player mode - use original handler
+      originalHandleClick(r, c);
+    }
+
+    // Helper functions
+    function isMultiplayerMode() {
+      return pc !== null && dataChannel !== null;
+    }
+
+    // Replace functions in the global scope
+    window.placeMark = placeMark;
+    window.handleClick = handleClick;
+    window.init = init;
+
+    // Replace the INVITE button text
+    document.addEventListener('DOMContentLoaded', () => {
+      const buttons = document.querySelectorAll('.main-buttons div');
+      buttons.forEach(button => {
+        if (button.textContent.trim() === '대전' || button.textContent.trim() === 'INVITE') {
+          button.textContent = '멀티플레이';
+        }
+      });
+    });
+
+    // ── BOOT ─────────────────────────────────────────────
     init();
   </script>
-</body>
-</html>
