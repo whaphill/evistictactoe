@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="eviTicTacToe">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="evi's TicTacToe">
+<meta name="description" content="3목 틱택토 - 10점 먼저 이기는 사람이 승리">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0a0f' width='180' height='180' rx='40'/><text x='50%25' y='45%25' font-size='90' text-anchor='middle' dominant-baseline='central' fill='%23ff6b9d'>O</text><text x='70%25' y='70%25' font-size='60' text-anchor='middle' dominant-baseline='central' fill='%234ecdc4'>X</text></svg>">
+<title>evi's TicTacToe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<!-- QR Code Generator -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<!-- QR Code Scanner -->
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #0a0a0f;
+  background-image:
+    radial-gradient(ellipse at 20% 80%, rgba(78, 205, 196, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 107, 157, 0.03) 0%, transparent 50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Noto Sans KR', sans-serif;
+  color: #e0e0e0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  gap: 1.2rem;
+  overflow-x: hidden;
+}
+
+/* ─── MAIN SCREEN ─── */
+#main-screen {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  z-index: 200;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+#main-screen.hidden {
+  opacity: 0;
+  transform: scale(1.1);
+  pointer-events: none;
+}
+
+.main-title {
+  text-align: center;
+  animation: titleFloat 3s ease-in-out infinite;
+}
+.main-title .title-oxy {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(3rem, 15vw, 6rem);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.main-title .title-ox { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.5); }
+.main-title .title-xs { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.5); }
+.main-title .title-tac {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.3em;
+  margin-top: 0.5rem;
+}
+.main-title .title-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #555;
+  margin-top: 0.8rem;
+  letter-spacing: 0.1em;
+}
+
+@keyframes titleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.main-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(80vw, 280px);
+}
+.main-btn {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: 2px solid;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.1em;
+  position: relative;
+  overflow: hidden;
+}
+.main-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.main-btn:active {
+  transform: scale(0.97);
+}
+
+.main-btn.play {
+  border-color: #ffd700;
+  color: #ffd700;
+}
+.main-btn.play::before {
+  background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
+}
+.main-btn.play:hover::before, .main-btn.play:active::before { opacity: 1; }
+.main-btn.play:hover { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+
+.main-btn.invite {
+  border-color: #9b59b6;
+  color: #9b59b6;
+}
+.main-btn.invite::before {
+  background: linear-gradient(135deg, rgba(155,89,182,0.15), rgba(155,89,182,0.05));
+}
+.main-btn.invite:hover::before, .main-btn.invite:active::before { opacity: 1; }
+.main-btn.invite:hover { box-shadow: 0 0 20px rgba(155,89,182,0.3); }
+
+.main-btn.shop {
+  border-color: #3498db;
+  color: #3498db;
+}
+.main-btn.shop::before {
+  background: linear-gradient(135deg, rgba(52,152,219,0.15), rgba(52,152,219,0.05));
+}
+.main-btn.shop:hover::before, .main-btn.shop:active::before { opacity: 1; }
+.main-btn.shop:hover { box-shadow: 0 0 20px rgba(52,152,219,0.3); }
+
+.main-btn.multiplayer {
+  border-color: #2ecc71;
+  color: #2ecc71;
+}
+.main-btn.multiplayer::before {
+  background: linear-gradient(135deg, rgba(46,204,113,0.15), rgba(46,204,113,0.05));
+}
+.main-btn.multiplayer:hover::before, .main-btn.multiplayer:active::before { opacity: 1; }
+.main-btn.multiplayer:hover { box-shadow: 0 0 20px rgba(46,204,113,0.3); }
+
+#restart-row {
+  display: flex;
+  gap: 0.8rem;
+  width: min(92vw, 480px);
+  justify-content: flex-end;
+}
+.small-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  padding: 0.45rem 1rem;
+  background: transparent;
+  color: #555;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.small-btn:hover {
+  color: #e0e0e0;
+  border-color: #5a5a7a;
+}
+.small-btn:active { transform: scale(0.97); }
+
+/* ─── GAME SCREEN ─── */
+#game-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  width: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+#game-screen.visible {
+  opacity: 1;
+}
+
+header {
+  text-align: center;
+}
+header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
+  letter-spacing: 0.1em;
+  background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+header .subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: #555;
+  margin-top: 0.25rem;
+  letter-spacing: 0.05em;
+}
+
+#scoreboard {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: #1a1a2e;
+  border: 1px solid #2a2a3a;
+  border-radius: 12px;
+  padding: 0.8rem 1.5rem;
+}
+.score-block {
+  text-align: center;
+  min-width: 4rem;
+}
+.score-block .mark {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.score-block .mark.o { color: #ff6b9d; }
+.score-block .mark.x { color: #4ecdc4; }
+.score-block .pts {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255,215,0,0.4);
+  transition: transform 0.15s ease;
+}
+.score-block .pts.bump {
+  transform: scale(1.4);
+}
+.score-vs {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #444;
+}
+
+#turn-indicator {
+  font-size: 0.85rem;
+  color: #666;
+  text-align: center;
+  height: 1.2em;
+}
+#turn-indicator .turn-o { color: #ff6b9d; }
+#turn-indicator .turn-x { color: #4ecdc4; }
+
+#board-wrapper {
+  position: relative;
+  width: min(92vw, 480px);
+  height: min(92vw, 480px);
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  gap: 2px;
+  background: #1c1c28;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid #2a2a3a;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+  width: 100%;
+  height: 100%;
+}
+.cell {
+  background: #12121a;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 100%;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  aspect-ratio: 1 / 1;
+}
+.cell[data-col="2"] { border-right: 2px solid #3a3a4a; }
+.cell[data-col="5"] { border-right: 2px solid #3a3a4a; }
+.cell[data-row="2"] { border-bottom: 2px solid #3a3a4a; }
+.cell[data-row="5"] { border-bottom: 2px solid #3a3a4a; }
+.cell:first-child { border-top-left-radius: 6px; }
+.cell:nth-child(9) { border-top-right-radius: 6px; }
+.cell:nth-child(73) { border-bottom-left-radius: 6px; }
+.cell:last-child { border-bottom-right-radius: 6px; }
+
+.cell.O { color: #ff6b9d; text-shadow: 0 0 8px rgba(255,107,157,0.5); }
+.cell.X { color: #4ecdc4; text-shadow: 0 0 8px rgba(78,205,196,0.5); }
+
+.cell:not(.occupied):hover { background: #1e1e2e; }
+.cell.occupied { cursor: not-allowed; }
+
+.cell.triple-hit {
+  animation: tripleGlow 0.6s ease-out;
+}
+@keyframes tripleGlow {
+  0% { box-shadow: 0 0 0 0px rgba(255,215,0,0.8); }
+  40% { box-shadow: 0 0 18px 4px rgba(255,215,0,0.8); }
+  100% { box-shadow: 0 0 4px 0px rgba(255,215,0,0.3); }
+}
+
+.cell.pop {
+  animation: popIn 0.2s ease-out;
+}
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.cell.shake {
+  animation: shakeAnim 0.2s ease;
+}
+@keyframes shakeAnim {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+#triple-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.triple-line {
+  stroke-width: 1;
+  stroke-linecap: round;
+  fill: none;
+  opacity: 0.85;
+}
+.triple-line.O {
+  stroke: #ff6b9d;
+}
+.triple-line.X {
+  stroke: #4ecdc4;
+}
+@keyframes lineAppear {
+  0% { stroke-dashoffset: 500; }
+  100% { stroke-dashoffset: 0; }
+}
+.triple-line.animate {
+  stroke-dasharray: 500;
+  animation: lineAppear 0.4s ease-out forwards;
+}
+
+#message {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(1rem, 4vw, 1.4rem);
+  font-weight: 700;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+#message.win-o { color: #ff6b9d; text-shadow: 0 0 16px rgba(255,107,157,0.7); }
+#message.win-x { color: #4ecdc4; text-shadow: 0 0 16px rgba(78,205,196,0.7); }
+#message.draw { color: #888; }
+
+#restart-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 1.6rem;
+  background: transparent;
+  color: #666;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+#restart-btn:hover {
+  color: #e0e0e0;
+  border-color: #5a5a7a;
+}
+#restart-btn:active { transform: scale(0.97); }
+
+#win-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  backdrop-filter: blur(4px);
+  z-index: 100;
+}
+#win-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+#win-overlay .win-text {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  animation: bounceIn 0.5s ease-out;
+}
+#win-overlay .win-text.o { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.8); }
+#win-overlay .win-text.x { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.8); }
+@keyframes bounceIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+#win-overlay button {
+  font-family: 'JetBrains Mono', monospace;
+  padding: 0.7rem 2rem;
+  background: #1a1a2e;
+  color: #ffd700;
+  border: 1px solid #ffd700;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.05em;
+}
+#win-overlay button:hover {
+  background: #ffd700;
+  color: #0a0a0f;
+  box-shadow: 0 0 20px rgba(255,215,0,0.4);
+}
+.overlay-btns {
+  display: flex;
+  gap: 1rem;
+}
+#overlay-main-btn {
+  color: #888 !important;
+  border-color: #555 !important;
+}
+#overlay-main-btn:hover {
+  background: #2a2a3e !important;
+  color: #e0e0e0 !important;
+  box-shadow: none !important;
+}
+
+/* ─── MULTIPLAYER LOBBY ─── */
+#mp-lobby {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0f;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  z-index: 300;
+}
+#mp-lobby.visible {
+  display: flex;
+}
+
+.mp-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+  background: linear-gradient(135deg, #2ecc71, #4ecdc4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.1em;
+}
+
+.mp-options {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.mp-card {
+  width: min(45vw, 200px);
+  padding: 2rem 1.5rem;
+  background: #12121a;
+  border: 1px solid #2a2a3a;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+.mp-card:hover {
+  border-color: #2ecc71;
+  box-shadow: 0 0 24px rgba(46,204,113,0.15);
+  transform: translateY(-4px);
+}
+.mp-card .mp-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.8rem;
+}
+.mp-card .mp-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  color: #e0e0e0;
+  letter-spacing: 0.05em;
+}
+.mp-card .mp-desc {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.4rem;
+}
+
+.mp-panel {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.mp-panel.visible {
+  display: flex;
+}
+
+.mp-qr-box {
+  width: 240px;
+  height: 240px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mp-qr-box canvas {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+
+#mp-scan-area {
+  width: min(80vw, 300px);
+  aspect-ratio: 1;
+  background: #12121a;
+  border: 2px dashed #3a3a4a;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+#mp-scan-area video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.mp-scan-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 0.8rem;
+  color: #3a3a4a;
+  font-size: 2rem;
+}
+.mp-scan-placeholder span {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.mp-file-input {
+  font-size: 0.8rem !important;
+  color: #aaa !important;
+  margin-top: 0.5rem;
+}
+.mp-file-input::file-selector-button {
+  background: #2a2a3a;
+  border: 1px solid #3a3a4a;
+  color: #e0e0e0;
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.mp-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: #888;
+  text-align: center;
+  min-height: 1.4em;
+}
+.mp-status.connected { color: #2ecc71; }
+.mp-status.error { color: #e74c3c; }
+
+.mp-btn-group {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.mp-back-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 1.2rem;
+  background: transparent;
+  color: #555;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.mp-back-btn:hover {
+  color: #e0e0e0;
+  border-color: #5a5a7a;
+}
+
+.mp-step-text {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 0.8rem;
+  color: #888;
+  text-align: center;
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<!-- MAIN SCREEN -->
+<div id="main-screen">
+  <div class="main-title">
+    <div class="title-oxy">
+      <span class="title-ox">O</span><span class="title-xs">X</span>
+    </div>
+    <div class="title-tac">TICTACTOE</div>
+    <div class="title-sub">3목 틱택토 · 10점 먼저 이기는 사람이 승리</div>
+  </div>
+  <div class="main-buttons">
+    <button class="main-btn play" id="btn-play">PLAY</button>
+    <button class="main-btn multiplayer" id="btn-multiplayer">MULTIPLAYER</button>
+    <button class="main-btn invite" id="btn-invite">INVITE</button>
+    <button class="main-btn shop" id="btn-shop">SHOP</button>
+  </div>
+</div>
+
+<!-- MULTIPLAYER LOBBY -->
+<div id="mp-lobby">
+  <div class="mp-title">Multiplayer</div>
+
+  <div class="mp-options" id="mp-mode-select">
+    <div class="mp-card" id="mp-create">
+      <div class="mp-icon">&#x1F451;</div>
+      <div class="mp-label">Create Room</div>
+      <div class="mp-desc">호스트가 되어 방을 만듭니다</div>
+    </div>
+    <div class="mp-card" id="mp-join">
+      <div class="mp-icon">&#x1F517;</div>
+      <div class="mp-label">Join Room</div>
+      <div class="mp-desc">QR 코드를 스캔하여 참여합니다</div>
+    </div>
+  </div>
+
+  <!-- HOST FLOW -->
+  <div class="mp-panel" id="mp-host-panel">
+    <div class="mp-status" id="mp-host-status">준비 중...</div>
+    <div class="mp-qr-box" id="mp-host-qr"></div>
+    <div class="mp-step-text" id="mp-host-step"></div>
+    <div id="mp-host-scan-zone"></div>
+  </div>
+
+  <!-- GUEST FLOW -->
+  <div class="mp-panel" id="mp-guest-panel">
+    <div class="mp-status" id="mp-guest-status">준비 중...</div>
+    <div id="mp-guest-scan-zone"></div>
+    <div class="mp-qr-box" id="mp-guest-qr" style="display:none;"></div>
+    <div class="mp-step-text" id="mp-guest-step"></div>
+  </div>
+
+  <div class="mp-btn-group">
+    <button class="mp-back-btn" id="mp-back">&#x2190; 메인으로</button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <header>
+    <h1>evi's TicTacToe</h1>
+    <p class="subtitle">3목 틱택토 &middot; 10점 먼저 이기는 사람이 승리</p>
+  </header>
+
+  <div id="scoreboard">
+    <div class="score-block">
+      <div class="mark o">O</div>
+      <div class="pts" id="score-o">0</div>
+    </div>
+    <div class="score-vs">:</div>
+    <div class="score-block">
+      <div class="mark x">X</div>
+      <div class="pts" id="score-x">0</div>
+    </div>
+  </div>
+
+  <div id="turn-indicator">
+    <span class="turn-o">Player O</span>의 턴
+  </div>
+
+  <div id="board-wrapper">
+    <div id="board"></div>
+    <svg id="triple-lines" style="position:absolute;top:6px;left:6px;width:calc(100% - 12px);height:calc(100% - 12px);overflow:visible;" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+  </div>
+
+  <div id="message"></div>
+
+  <div id="restart-row">
+    <button id="restart-btn" class="small-btn">&#x27F5; 메인</button>
+    <button id="restart-game-btn" class="small-btn">다시 시작</button>
+  </div>
+</div>
+
+<div id="win-overlay">
+  <div class="win-text" id="win-text"></div>
+  <div class="overlay-btns">
+    <button id="overlay-restart-btn">한 판 더</button>
+    <button id="overlay-main-btn">메인으로</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  CONSTANTS & STATE
+// ═══════════════════════════════════════
+const WIN_SCORE = 10;
+const BOARD_SIZE = 9;
+const BOARD_PADDING = 6;
+const CELL_GAP = 2;
+
+const DIRS = [
+  { dr: 0, dc: 1 },   // 0: horizontal →
+  { dr: 1, dc: 0 },   // 1: vertical ↓
+  { dr: 1, dc: 1 },   // 2: diagonal ↘
+  { dr: 1, dc: -1 },  // 3: diagonal ↗
+];
+
+let board = [];
+let scores = { O: 0, X: 0 };
+let current = 'O';
+let status = 'PLAYING';
+
+// Multiplayer state
+let gameMode = 'local';  // 'local' | 'multiplayer_host' | 'multiplayer_guest'
+let myRole = null;        // 'O' (host) | 'X' (guest)
+let isRemoteMove = false;
+let peerConnection = null;
+let dataChannel = null;
+let collectedCandidates = [];
+let scanReader = null;
+
+const STUN_SERVERS = {
+  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+};
+
+// ═══════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════
+const mainScreen     = document.getElementById('main-screen');
+const gameScreen     = document.getElementById('game-screen');
+const btnPlay        = document.getElementById('btn-play');
+const btnInvite      = document.getElementById('btn-invite');
+const btnShop        = document.getElementById('btn-shop');
+const btnMultiplayer = document.getElementById('btn-multiplayer');
+const boardEl        = document.getElementById('board');
+const msgEl          = document.getElementById('message');
+const turnEl         = document.getElementById('turn-indicator');
+const scoreOEl       = document.getElementById('score-o');
+const scoreXEl       = document.getElementById('score-x');
+const restartBtn     = document.getElementById('restart-btn');
+const restartGameBtn = document.getElementById('restart-game-btn');
+const overlayEl      = document.getElementById('win-overlay');
+const winTextEl      = document.getElementById('win-text');
+const overlayBtn     = document.getElementById('overlay-restart-btn');
+const overlayMainBtn = document.getElementById('overlay-main-btn');
+const linesSvg       = document.getElementById('triple-lines');
+
+// MP DOM refs
+const mpLobby          = document.getElementById('mp-lobby');
+const mpModeSelect     = document.getElementById('mp-mode-select');
+const mpHostPanel      = document.getElementById('mp-host-panel');
+const mpGuestPanel     = document.getElementById('mp-guest-panel');
+const mpBackBtn        = document.getElementById('mp-back');
+const mpCreate         = document.getElementById('mp-create');
+const mpJoin           = document.getElementById('mp-join');
+const mpHostStatus     = document.getElementById('mp-host-status');
+const mpGuestStatus    = document.getElementById('mp-guest-status');
+const mpHostQr         = document.getElementById('mp-host-qr');
+const mpGuestQr        = document.getElementById('mp-guest-qr');
+const mpHostStep       = document.getElementById('mp-host-step');
+const mpGuestStep      = document.getElementById('mp-guest-step');
+const mpHostScanZone   = document.getElementById('mp-host-scan-zone');
+const mpGuestScanZone  = document.getElementById('mp-guest-scan-zone');
+
+// ═══════════════════════════════════════
+//  SCREEN NAVIGATION
+// ═══════════════════════════════════════
+function showMainScreen() {
+  gameScreen.classList.remove('visible');
+  mpLobby.classList.remove('visible');
+  mainScreen.classList.remove('hidden');
+  gameMode = 'local';
+  myRole = null;
+  cleanupPeerConnection();
+}
+
+function showGameScreen() {
+  mainScreen.classList.add('hidden');
+  mpLobby.classList.remove('visible');
+  gameScreen.classList.add('visible');
+}
+
+function showMPLobby() {
+  mainScreen.classList.add('hidden');
+  gameScreen.classList.remove('visible');
+  mpLobby.classList.add('visible');
+  resetMPLobby();
+}
+
+// ═══════════════════════════════════════
+//  GAME LOGIC
+// ═══════════════════════════════════════
+function init() {
+  board = Array.from({ length: BOARD_SIZE }, () =>
+    Array.from({ length: BOARD_SIZE }, () => ({
+      value: null,
+      blockedDirs: [false, false, false, false],
+    }))
+  );
+  scores = { O: 0, X: 0 };
+  current = 'O';
+  status = 'PLAYING';
+  linesSvg.innerHTML = '';
+  renderBoard();
+  renderScore();
+  renderTurn();
+  msgEl.textContent = '';
+  msgEl.className = '';
+  overlayEl.classList.remove('show');
+}
+
+function renderBoard() {
+  boardEl.innerHTML = '';
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      const val = board[r][c].value;
+      if (val) {
+        cell.textContent = val;
+        cell.classList.add(val, 'occupied');
+      }
+      cell.addEventListener('click', () => handleClick(r, c));
+      boardEl.appendChild(cell);
+    }
+  }
+}
+
+function renderScore() {
+  scoreOEl.textContent = scores.O;
+  scoreXEl.textContent = scores.X;
+}
+
+function renderTurn() {
+  if (status !== 'PLAYING') { turnEl.innerHTML = ''; return; }
+  let label = `<span class="turn-${current.toLowerCase()}">Player ${current}</span>의 턴`;
+  if (gameMode.startsWith('multiplayer')) {
+    label += current === myRole ? ' (나의 턴)' : ' (대기 중)';
+  }
+  turnEl.innerHTML = label;
+}
+
+function drawTripleLine(cells, dirIdx, player) {
+  const totalSize = boardEl.offsetWidth;
+  const gap = 2;
+  const cellSize = (totalSize - (BOARD_SIZE - 1) * gap) / BOARD_SIZE;
+  const startOffset = cellSize / 2;
+  const extend = cellSize * 0.15;
+  const toPct = (px) => (px / totalSize) * 100;
+
+  const pts = cells.map(([r, c]) => ({
+    x: toPct(c * (cellSize + gap) + startOffset),
+    y: toPct(r * (cellSize + gap) + startOffset)
+  }));
+
+  let x1, y1, x2, y2;
+  if (dirIdx === 0) {
+    y1 = y2 = pts[1].y;
+    x1 = pts[0].x - toPct(extend);
+    x2 = pts[2].x + toPct(extend);
+  } else if (dirIdx === 1) {
+    x1 = x2 = pts[1].x;
+    y1 = pts[0].y - toPct(extend);
+    y2 = pts[2].y + toPct(extend);
+  } else {
+    const dx = pts[2].x - pts[0].x;
+    const dy = pts[2].y - pts[0].y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / len, uy = dy / len;
+    const cellExtent = toPct(cellSize / 2 + extend);
+    x1 = pts[0].x - ux * cellExtent;
+    y1 = pts[0].y - uy * cellExtent;
+    x2 = pts[2].x + ux * cellExtent;
+    y2 = pts[2].y + uy * cellExtent;
+  }
+
+  x1 = Math.max(0, Math.min(100, x1));
+  y1 = Math.max(0, Math.min(100, y1));
+  x2 = Math.max(0, Math.min(100, x2));
+  y2 = Math.max(0, Math.min(100, y2));
+
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', x1);
+  line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2);
+  line.setAttribute('y2', y2);
+  line.setAttribute('class', `triple-line ${player} animate`);
+  linesSvg.appendChild(line);
+}
+
+function handleClick(r, c) {
+  if (status === 'GAME_OVER') return;
+
+  if (board[r][c].value !== null) {
+    const idx = r * BOARD_SIZE + c;
+    const cell = boardEl.children[idx];
+    cell.classList.remove('shake');
+    void cell.offsetWidth;
+    cell.classList.add('shake');
+    setTimeout(() => cell.classList.remove('shake'), 250);
+    return;
+  }
+
+  // multiplayer: only allow on my turn
+  if (gameMode.startsWith('multiplayer') && !isRemoteMove && current !== myRole) {
+    return;
+  }
+
+  placeMark(r, c);
+
+  // multiplayer: send my move to peer
+  if (gameMode.startsWith('multiplayer') && !isRemoteMove) {
+    sendToPeer({ type: 'MOVE', payload: { r, c }, ts: Date.now() });
+  }
+}
+
+function placeMark(r, c) {
+  board[r][c].value = current;
+  const idx = r * BOARD_SIZE + c;
+  const cell = boardEl.children[idx];
+  cell.textContent = current;
+  cell.classList.add(current, 'pop', 'occupied');
+  setTimeout(() => cell.classList.remove('pop'), 220);
+
+  const triples = detectTriples(current);
+
+  if (triples.length > 0) {
+    triples.forEach(({ cells, dirIdx }) => {
+      const canScore = cells.every(([tr, tc]) => !board[tr][tc].blockedDirs[dirIdx]);
+      if (!canScore) return;
+
+      cells.forEach(([tr, tc]) => {
+        board[tr][tc].blockedDirs[dirIdx] = true;
+      });
+
+      scores[current] += 1;
+      drawTripleLine(cells, dirIdx, current);
+
+      cells.forEach(([tr, tc]) => {
+        const ti = tr * BOARD_SIZE + tc;
+        const tcEl = boardEl.children[ti];
+        tcEl.classList.add('triple-hit');
+        setTimeout(() => tcEl.classList.remove('triple-hit'), 700);
+      });
+    });
+
+    bumpScore(current);
+    renderScore();
+
+    if (scores[current] >= WIN_SCORE) {
+      endGame(current);
+      return;
+    }
+  }
+
+  current = current === 'O' ? 'X' : 'O';
+  renderTurn();
+}
+
+function bumpScore(player) {
+  const el = player === 'O' ? scoreOEl : scoreXEl;
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 200);
+}
+
+function detectTriples(player) {
+  const found = [];
+  for (let d = 0; d < 4; d++) {
+    const { dr, dc } = DIRS[d];
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (board[r][c].value !== player) continue;
+        const r1 = r + dr, c1 = c + dc;
+        const r2 = r + 2*dr, c2 = c + 2*dc;
+        if (r2 < 0 || r2 >= BOARD_SIZE || c2 < 0 || c2 >= BOARD_SIZE) continue;
+        if (board[r1][c1].value !== player) continue;
+        if (board[r2][c2].value !== player) continue;
+        if (board[r][c].blockedDirs[d]) continue;
+        if (board[r1][c1].blockedDirs[d]) continue;
+        if (board[r2][c2].blockedDirs[d]) continue;
+        found.push({ cells: [[r,c],[r1,c1],[r2,c2]], dirIdx: d });
+      }
+    }
+  }
+  return found;
+}
+
+function endGame(winner) {
+  status = 'GAME_OVER';
+  turnEl.innerHTML = '';
+  msgEl.textContent = `Player ${winner} WIN!`;
+  msgEl.className = winner === 'O' ? 'win-o' : 'win-x';
+  winTextEl.textContent = `Player ${winner} WIN!`;
+  winTextEl.className = winner.toLowerCase();
+  overlayEl.classList.add('show');
+
+  if (gameMode.startsWith('multiplayer')) {
+    sendToPeer({ type: 'GAME_OVER', payload: { winner }, ts: Date.now() });
+  }
+}
+
+// ═══════════════════════════════════════
+//  MULTIPLAYER — P2P (WebRTC + QR)
+// ═══════════════════════════════════════
+
+function resetMPLobby() {
+  mpModeSelect.style.display = 'flex';
+  mpHostPanel.classList.remove('visible');
+  mpGuestPanel.classList.remove('visible');
+  mpHostQr.innerHTML = '';
+  mpGuestQr.innerHTML = '';
+  mpGuestQr.style.display = 'none';
+  mpHostScanZone.innerHTML = '';
+  mpGuestScanZone.innerHTML = '';
+  mpHostStep.textContent = '';
+  mpGuestStep.textContent = '';
+  stopScanReader();
+}
+
+function stopScanReader() {
+  if (scanReader) {
+    try { scanReader.stop(); } catch(e) {}
+    scanReader = null;
+  }
+}
+
+// --- WebRTC ---
+function createPeerConnection() {
+  cleanupPeerConnection();
+  peerConnection = new RTCPeerConnection(STUN_SERVERS);
+  collectedCandidates = [];
+
+  peerConnection.onicecandidate = (ev) => {
+    if (ev.candidate) collectedCandidates.push(ev.candidate.toJSON());
+  };
+
+  peerConnection.ondatachannel = (ev) => {
+    dataChannel = ev.channel;
+    setupDataChannel(dataChannel);
+  };
+
+  peerConnection.onconnectionstatechange = () => {
+    const s = peerConnection.connectionState;
+    if (s === 'connected') {
+      updateMPStatus('연결 성공! 게임을 시작합니다', 'connected');
+      setTimeout(() => startMultiplayerGame(), 500);
+    } else if (['failed','disconnected','closed'].includes(s)) {
+      updateMPStatus('연결이 끊어졌습니다', 'error');
+      gameMode = 'local';
+      myRole = null;
+    }
+  };
+
+  return peerConnection;
+}
+
+function cleanupPeerConnection() {
+  if (dataChannel) { try { dataChannel.close(); } catch(e) {} dataChannel = null; }
+  if (peerConnection) { try { peerConnection.close(); } catch(e) {} peerConnection = null; }
+  collectedCandidates = [];
+}
+
+function setupDataChannel(ch) {
+  ch.onopen = () => {
+    console.log('[P2P] DataChannel open');
+    if (gameMode === 'multiplayer_host') sendSync();
+  };
+  ch.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      handlePeerMessage(msg);
+    } catch (e) {
+      console.error('[P2P] Invalid message:', ev.data);
+    }
+  };
+  ch.onclose = () => {
+    console.log('[P2P] DataChannel closed');
+  };
+}
+
+// --- QR Generation ---
+async function generateQR(data, container) {
+  container.innerHTML = '';
+  try {
+    const jsonStr = JSON.stringify(data);
+    const canvas = document.createElement('canvas');
+    await QRCode.toCanvas(canvas, jsonStr, {
+      width: 220,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+    container.appendChild(canvas);
+  } catch (e) {
+    console.error('[QR] Generation failed:', e);
+    container.innerHTML = '<p style="color:#e74c3c;font-size:0.8rem;padding:1rem;">QR 생성 실패<br>데이터가 너무 큽니다</p>';
+  }
+}
+
+// --- QR Scan (file-based) ---
+function createFileScanner(zone, onResult) {
+  zone.innerHTML = '';
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.className = 'mp-file-input';
+  const label = document.createElement('div');
+  label.style.cssText = 'font-size:0.75rem;color:#666;margin-top:0.4rem;';
+  label.textContent = 'QR 이미지를 선택하세요';
+
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const scanner = new Html5Qrcode('mp-file-scan-' + Date.now());
+      const hiddenDiv = document.createElement('div');
+      hiddenDiv.id = scanner._elementId;
+      hiddenDiv.style.display = 'none';
+      document.body.appendChild(hiddenDiv);
+
+      const result = await scanner.scanFile(file, true);
+      scanner.clear();
+      hiddenDiv.remove();
+      const data = JSON.parse(result);
+      onResult(data);
+    } catch (e) {
+      alert('QR 인식 실패: ' + e.message);
+    }
+  });
+
+  zone.appendChild(input);
+  zone.appendChild(label);
+}
+
+// --- Host Flow ---
+async function startAsHost() {
+  gameMode = 'multiplayer_host';
+  myRole = 'O';
+
+  mpModeSelect.style.display = 'none';
+  mpHostPanel.classList.add('visible');
+  mpHostStatus.textContent = 'Offer를 생성하는 중...';
+  mpHostStep.textContent = '1/2: 게스트에게 이 QR을 보여주세요';
+
+  createPeerConnection();
+  dataChannel = peerConnection.createDataChannel('game', { ordered: true });
+  setupDataChannel(dataChannel);
+
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+
+  // Wait for ICE gathering
+  await waitForICEGathering(3000);
+
+  const signalData = {
+    type: 'offer',
+    sdp: peerConnection.localDescription.toJSON(),
+    candidates: collectedCandidates
+  };
+
+  mpHostStatus.textContent = 'Offer QR — 게스트가 스캔하세요';
+  await generateQR(signalData, mpHostQr);
+
+  // Prepare Answer scan zone
+  mpHostStep.textContent = '2/2: 게스트의 Answer QR 이미지를 선택하세요';
+  createFileScanner(mpHostScanZone, async (data) => {
+    if (data.type !== 'answer') { alert('유효하지 않은 QR입니다'); return; }
+    try {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      if (data.candidates) {
+        for (const cand of data.candidates) {
+          try { await peerConnection.addIceCandidate(new RTCIceCandidate(cand)); } catch(e) {}
+        }
+      }
+      mpHostStatus.textContent = '연결 수립 중...';
+      mpHostStep.textContent = '';
+    } catch (e) {
+      alert('연결 설정 실패: ' + e.message);
+    }
+  });
+}
+
+// --- Guest Flow ---
+async function startAsGuest() {
+  gameMode = 'multiplayer_guest';
+  myRole = 'X';
+
+  mpModeSelect.style.display = 'none';
+  mpGuestPanel.classList.add('visible');
+  mpGuestStatus.textContent = '1/2: 호스트의 Offer QR 이미지를 선택하세요';
+  mpGuestStep.textContent = '';
+
+  createFileScanner(mpGuestScanZone, async (data) => {
+    if (data.type !== 'offer') { alert('유효하지 않은 QR입니다'); return; }
+
+    mpGuestStatus.textContent = 'Answer를 생성하는 중...';
+
+    createPeerConnection();
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+
+    if (data.candidates) {
+      for (const cand of data.candidates) {
+        try { await peerConnection.addIceCandidate(new RTCIceCandidate(cand)); } catch(e) {}
+      }
+    }
+
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+
+    await waitForICEGathering(3000);
+
+    const signalData = {
+      type: 'answer',
+      sdp: peerConnection.localDescription.toJSON(),
+      candidates: collectedCandidates
+    };
+
+    mpGuestStatus.textContent = '2/2: 이 QR을 호스트에게 보여주세요';
+    mpGuestStep.textContent = '호스트가 이 QR을 스캔하면 연결됩니다';
+    mpGuestScanZone.style.display = 'none';
+    mpGuestQr.style.display = 'flex';
+    await generateQR(signalData, mpGuestQr);
+  });
+}
+
+// --- ICE Gathering Helper ---
+function waitForICEGathering(timeout) {
+  return new Promise((resolve) => {
+    if (peerConnection.iceGatheringState === 'complete') {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(resolve, timeout);
+    peerConnection.onicegatheringstatechange = () => {
+      if (peerConnection.iceGatheringState === 'complete') {
+        clearTimeout(timer);
+        resolve();
+      }
+    };
+  });
+}
+
+// --- Messaging ---
+function sendToPeer(msg) {
+  if (dataChannel && dataChannel.readyState === 'open') {
+    dataChannel.send(JSON.stringify(msg));
+  }
+}
+
+function sendMove(r, c) {
+  sendToPeer({ type: 'MOVE', payload: { r, c }, ts: Date.now() });
+}
+
+function sendSync() {
+  const serializableBoard = board.map(row => row.map(cell => ({
+    value: cell.value,
+    blockedDirs: [...cell.blockedDirs]
+  })));
+  sendToPeer({
+    type: 'SYNC',
+    payload: { board: serializableBoard, scores, current, status },
+    ts: Date.now()
+  });
+}
+
+function handlePeerMessage(msg) {
+  switch (msg.type) {
+    case 'MOVE':
+      if (gameMode.startsWith('multiplayer')) {
+        isRemoteMove = true;
+        placeMark(msg.payload.r, msg.payload.c);
+        isRemoteMove = false;
+      }
+      break;
+
+    case 'SYNC':
+      if (gameMode === 'multiplayer_guest') {
+        board = msg.payload.board.map(row => row.map(cell => ({
+          value: cell.value,
+          blockedDirs: [...cell.blockedDirs]
+        })));
+        scores = msg.payload.scores;
+        current = msg.payload.current;
+        status = msg.payload.status;
+        renderBoard();
+        renderScore();
+        renderTurn();
+      }
+      break;
+
+    case 'GAME_OVER':
+      if (gameMode.startsWith('multiplayer')) {
+        endGame(msg.payload.winner);
+      }
+      break;
+
+    case 'RESTART_REQ':
+      if (gameMode.startsWith('multiplayer')) {
+        init();
+        sendToPeer({ type: 'RESTART_ACK', ts: Date.now() });
+      }
+      break;
+
+    case 'RESTART_ACK':
+      if (gameMode.startsWith('multiplayer')) {
+        init();
+      }
+      break;
+
+    case 'PING':
+      sendToPeer({ type: 'PONG', ts: Date.now() });
+      break;
+  }
+}
+
+function startMultiplayerGame() {
+  mpLobby.classList.remove('visible');
+  showGameScreen();
+  init();
+}
+
+function updateMPStatus(text, cls) {
+  const el = gameMode === 'multiplayer_host' ? mpHostStatus : mpGuestStatus;
+  if (el) {
+    el.textContent = text;
+    el.className = 'mp-status ' + (cls || '');
+  }
+}
+
+// ═══════════════════════════════════════
+//  EVENT LISTENERS
+// ═══════════════════════════════════════
+
+// Main screen
+btnPlay.addEventListener('click', () => {
+  gameMode = 'local';
+  myRole = null;
+  init();
+  showGameScreen();
+});
+
+btnInvite.addEventListener('click', () => {
+  // placeholder
+});
+
+btnShop.addEventListener('click', () => {
+  // placeholder
+});
+
+btnMultiplayer.addEventListener('click', showMPLobby);
+
+// MP lobby
+mpBackBtn.addEventListener('click', showMainScreen);
+mpCreate.addEventListener('click', startAsHost);
+mpJoin.addEventListener('click', startAsGuest);
+
+// Game controls
+restartBtn.addEventListener('click', showMainScreen);
+restartGameBtn.addEventListener('click', () => {
+  if (gameMode.startsWith('multiplayer')) {
+    sendToPeer({ type: 'RESTART_REQ', ts: Date.now() });
+    init(); // optimistic restart
+  } else {
+    init();
+  }
+});
+overlayBtn.addEventListener('click', () => {
+  overlayEl.classList.remove('show');
+  if (gameMode.startsWith('multiplayer')) {
+    sendToPeer({ type: 'RESTART_REQ', ts: Date.now() });
+  }
+  init();
+});
+overlayMainBtn.addEventListener('click', () => {
+  overlayEl.classList.remove('show');
+  showMainScreen();
+});
+
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registered'))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
+
+// Init
+init();
+</script>
+</body>
+</html>
