@@ -20,6 +20,8 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <!-- QR Code Scanner -->
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<!-- pako compression -->
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <style>
 *, *::before, *::after {
   box-sizing: border-box;
@@ -1144,15 +1146,99 @@ function setupDataChannel(ch) {
   };
 }
 
+// --- SDP Slimming (strip unnecessary media lines for datachannel-only) ---
+function slimSDP(sdpStr) {
+  const skipPrefixes = [
+    'a=rtpmap:', 'a=rtcp:', 'a=extmap:', 'a=fmtp:',
+    'a=ice-pwd:', 'a=ice-ufrag:', 'a=setup:', 'a=mid:',
+    'a=msid-semantic:', 'a=ssrc:', 'a=ssrc-group:',
+    'a=rtcp-fb:', 'a=rid:', 'a=simulcast:'
+  ];
+  return sdpStr.split('\r\n').filter(line => {
+    if (!line) return false;
+    return !skipPrefixes.some(prefix => line.startsWith(prefix));
+  }).join('\r\n');
+}
+
+// --- Compression helpers (pako deflateRaw + base85) ---
+const B85_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!$%&*+-=?@^_~';
+
+function uint8ToBase85(bytes) {
+  let result = '';
+  const len = bytes.length;
+  let i = 0;
+  while (i < len) {
+    let n = 0;
+    let chunkLen = 0;
+    for (let j = 0; j < 4 && i < len; j++, i++) {
+      n = n * 256 + bytes[i];
+      chunkLen++;
+    }
+    const digits = [];
+    for (let j = 0; j < 5; j++) {
+      digits.push(n % 85);
+      n = Math.floor(n / 85);
+    }
+    const emitCount = chunkLen + 1;
+    for (let j = emitCount - 1; j >= 0; j--) {
+      result += B85_CHARS[digits[j]];
+    }
+  }
+  return result;
+}
+
+function base85ToUint8(str) {
+  const result = [];
+  const len = str.length;
+  let i = 0;
+  while (i < len) {
+    const chunk = [];
+    while (chunk.length < 5 && i < len) {
+      const idx = B85_CHARS.indexOf(str[i]);
+      if (idx !== -1) chunk.push(idx);
+      i++;
+    }
+    let n = 0;
+    for (let j = 0; j < chunk.length; j++) {
+      n = n * 85 + chunk[j];
+    }
+    const byteCount = chunk.length - 1;
+    const bytes = [];
+    for (let j = 0; j < byteCount; j++) {
+      bytes.push(n & 0xFF);
+      n = Math.floor(n / 256);
+    }
+    for (let j = bytes.length - 1; j >= 0; j--) {
+      result.push(bytes[j]);
+    }
+  }
+  return new Uint8Array(result);
+}
+
+function compressForQR(obj) {
+  const json = JSON.stringify(obj);
+  const compressed = pako.deflateRaw(new TextEncoder().encode(json));
+  return uint8ToBase85(compressed);
+}
+
+function decompressFromQR(str) {
+  const bytes = base85ToUint8(str);
+  const decompressed = pako.inflateRaw(bytes);
+  return JSON.parse(new TextDecoder().decode(decompressed));
+}
+
 // --- QR Generation ---
 async function generateQR(data, container) {
   container.innerHTML = '';
   try {
-    const jsonStr = JSON.stringify(data);
+    const compressed = compressForQR(data);
+    console.log(`[QR] 원본 ${JSON.stringify(data).length}B → 압축 ${compressed.length}자`);
+
     const canvas = document.createElement('canvas');
-    await QRCode.toCanvas(canvas, jsonStr, {
+    await QRCode.toCanvas(canvas, compressed, {
       width: 220,
       margin: 2,
+      errorCorrectionLevel: 'L',
       color: { dark: '#000000', light: '#ffffff' }
     });
     container.appendChild(canvas);
@@ -1186,7 +1272,7 @@ function createFileScanner(zone, onResult) {
       const result = await scanner.scanFile(file, true);
       scanner.clear();
       hiddenDiv.remove();
-      const data = JSON.parse(result);
+      const data = decompressFromQR(result);
       onResult(data);
     } catch (e) {
       alert('QR 인식 실패: ' + e.message);
@@ -1219,8 +1305,7 @@ async function startAsHost() {
 
   const signalData = {
     type: 'offer',
-    sdp: peerConnection.localDescription.toJSON(),
-    candidates: collectedCandidates
+    sdp: peerConnection.localDescription.toJSON()
   };
 
   mpHostStatus.textContent = 'Offer QR — 게스트가 스캔하세요';
@@ -1232,11 +1317,6 @@ async function startAsHost() {
     if (data.type !== 'answer') { alert('유효하지 않은 QR입니다'); return; }
     try {
       await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-      if (data.candidates) {
-        for (const cand of data.candidates) {
-          try { await peerConnection.addIceCandidate(new RTCIceCandidate(cand)); } catch(e) {}
-        }
-      }
       mpHostStatus.textContent = '연결 수립 중...';
       mpHostStep.textContent = '';
     } catch (e) {
@@ -1263,11 +1343,6 @@ async function startAsGuest() {
     createPeerConnection();
     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
 
-    if (data.candidates) {
-      for (const cand of data.candidates) {
-        try { await peerConnection.addIceCandidate(new RTCIceCandidate(cand)); } catch(e) {}
-      }
-    }
 
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
@@ -1276,8 +1351,7 @@ async function startAsGuest() {
 
     const signalData = {
       type: 'answer',
-      sdp: peerConnection.localDescription.toJSON(),
-      candidates: collectedCandidates
+      sdp: peerConnection.localDescription.toJSON()
     };
 
     mpGuestStatus.textContent = '2/2: 이 QR을 호스트에게 보여주세요';
