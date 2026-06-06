@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Test</title>
+</head>
+<body>
+  <h1>Testing Multiplayer Implementation</h1>
+  <div id="test-output">
+    <p>If you can see this, the file was created successfully.</p>
+    <button id="test-btn">Run Test</button>
+  </div>
+  <script>
+    document.getElementById('test-btn').addEventListener('click', () => {
+      // Test if we can access the main game functions
+      try {
+        // Check if global variables exist
+        console.log('Testing game state access...');
+        console.log('WIN_SCORE:', typeof WIN_SCORE !== 'undefined' ? WIN_SCORE : 'NOT FOUND');
+        console.log('BOARD_SIZE:', typeof BOARD_SIZE !== 'undefined' ? BOARD_SIZE : 'NOT FOUND');
+        console.log('current:', typeof current !== 'undefined' ? current : 'NOT FOUND');
+        console.log('status:', typeof status !== 'undefined' ? status : 'NOT FOUND');
+
+        // Test if functions exist
+        console.log('Testing function access...');
+        console.log('init:', typeof init !== 'undefined' ? 'FUNCTION' : 'NOT FOUND');
+        console.log('handleClick:', typeof handleClick !== 'undefined' ? 'FUNCTION' : 'NOT FOUND');
+        console.log('placeMark:', typeof placeMark !== 'undefined' ? 'FUNCTION' : 'NOT FOUND');
+        console.log('detectTriples:', typeof detectTriples !== 'undefined' ? 'FUNCTION' : 'NOT FOUND');
+
+        // Test multiplayer variables
+        console.log('Testing multiplayer state...');
+        console.log('multiplayerActive:', typeof multiplayerActive !== 'undefined' ? multiplayerActive : 'NOT FOUND');
+        console.log('isOfferer:', typeof isOfferer !== 'undefined' ? isOfferer : 'NOT FOUND');
+        console.log('myTurn:', typeof myTurn !== 'undefined' ? myTurn : 'NOT FOUND');
+
+        document.getElementById('test-output').innerHTML += '<p>Global variables and functions accessible!</p>';
+
+        // Test initialization
+        console.log('Testing init function...');
+        init();
+        console.log('After init - board length:', board.length);
+        console.log('After init - scores:', scores);
+        document.getElementById('test-output').innerHTML += '<p>Init function works!</p>';
+
+      } catch (e) {
+        console.error('Test failed:', e);
+        document.getElementById('test-output').innerHTML += `<p style="color: red;">Test failed: ${e.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>

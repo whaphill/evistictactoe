@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <h1>Simple Test</h1>
+  <div id="output">
+    Testing if external libraries load...
+  </div>
+  <script>
+    // Test if QRCode and Html5Qrcode are available
+    try {
+      console.log('QRCode:', typeof QRCode);
+      console.log('Html5Qrcode:', typeof Html5Qrcode);
+      document.getElementById('output').innerHTML =
+        '<p>QRCode: ' + (typeof QRCode !== 'undefined' ? 'FOUND' : 'NOT FOUND') + '</p>' +
+        '<p>Html5Qrcode: ' + (typeof Html5Qrcode !== 'undefined' ? 'FOUND' : 'NOT FOUND') + '</p>';
+    } catch(e) {
+      document.getElementById('output').innerHTML = '<p>Error: ' + e.message + '</p>';
+    }
+  </script>
+</body>
+</html>
