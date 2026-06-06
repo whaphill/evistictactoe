@@ -1,4 +1,4 @@
-const CACHE_NAME = 'evi-tictactoe-v3';
+const CACHE_NAME = 'evi-tictactoe-v4';
 const urlsToCache = [
   '/index.html',
   '/manifest.json'
