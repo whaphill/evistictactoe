@@ -1274,7 +1274,7 @@ async function generateQR(data, container) {
  qr.make();
 
  const moduleCount = qr.getModuleCount();
- const cellSize = Math.max(4, Math.floor(240 / moduleCount));
+ const cellSize = Math.max(6, Math.floor(360 / moduleCount));
  const size = moduleCount * cellSize;
  canvas.width = size;
  canvas.height = size;
@@ -1307,40 +1307,66 @@ function createFileScanner(zone, onResult) {
  label.style.cssText = 'font-size:0.75rem;color:#666;margin-top:0.4rem;';
  label.textContent = 'QR 이미지를 선택하세요';
 
+ function tryDecode(imageData, w, h) {
+  return jsQR(imageData.data, w, h);
+ }
+
  input.addEventListener('change', () => {
- const file = input.files[0];
- if (!file) return;
- const img = new Image();
- const reader = new FileReader();
- reader.onload = (e) => {
- img.onload = () => {
- const canvas = document.createElement('canvas');
- canvas.width = img.width;
- canvas.height = img.height;
- const ctx = canvas.getContext('2d');
- ctx.drawImage(img, 0, 0);
- const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
- const code = jsQR(imageData.data, imageData.width, imageData.height);
- if (code && code.data) {
- try {
- const data = decompressFromQR(code.data);
- onResult(data);
- } catch (err) {
- alert('QR 데이터 해독 실패: ' + err.message);
- }
- } else {
- alert('QR 코드를 찾을 수 없습니다. 선명한 이미지로 다시 시도해주세요.');
- }
- };
- img.src = e.target.result;
- };
- reader.readAsDataURL(file);
+  const file = input.files[0];
+  if (!file) return;
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = (e) => {
+   img.onload = () => {
+    // Draw to canvas, scaling up small images for better detection
+    const scale = Math.max(1, Math.ceil(800 / Math.max(img.width, img.height)));
+    const cw = img.width * scale;
+    const ch = img.height * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, cw, ch);
+
+    // Try 1: original size decode
+    let code = tryDecode(ctx.getImageData(0, 0, cw, ch), cw, ch);
+
+    // Try 2: grayscale + contrast boost if first attempt fails
+    if (!code || !code.data) {
+     const imgData = ctx.getImageData(0, 0, cw, ch);
+     const d = imgData.data;
+     for (let i = 0; i < d.length; i += 4) {
+      const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+      const boosted = gray < 128 ? 0 : 255;
+      d[i] = d[i+1] = d[i+2] = boosted;
+     }
+     ctx.putImageData(imgData, 0, 0);
+     code = tryDecode(ctx.getImageData(0, 0, cw, ch), cw, ch);
+    }
+
+    if (code && code.data) {
+     try {
+      const data = decompressFromQR(code.data);
+      onResult(data);
+     } catch (err) {
+      alert('QR 데이터 해독 실패: ' + err.message);
+     }
+    } else {
+     alert('QR 인식 실패
+
+스크린샷으로 저장 후 선택하거나,
+밝은 화면에서 가까이 찍어주세요.')    }
+   };
+   img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
  });
 
  zone.appendChild(input);
  zone.appendChild(label);
-}
-// --- Host Flow ---
+}// --- Host Flow ---
 async function startAsHost() {
   gameMode = 'multiplayer_host';
   myRole = 'O';
