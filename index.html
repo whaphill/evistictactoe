@@ -687,6 +687,48 @@ header .subtitle {
 .mp-apply-btn:hover {
   background: #ff8ab0;
 }
+
+/* ─── Server-based Multiplayer ─── */
+.mp-room-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.4);
+  text-align: center;
+  padding: 0.8rem 0;
+  background: #12121a;
+  border-radius: 12px;
+  border: 1px solid #2a2a3a;
+  min-width: 200px;
+}
+.mp-code-input {
+  width: 100%;
+  max-width: 200px;
+  background: #12121a;
+  color: #ffd700;
+  border: 2px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.mp-code-input:focus {
+  border-color: #ffd700;
+  box-shadow: 0 0 12px rgba(255,215,0,0.2);
+}
+.mp-code-input::placeholder {
+  font-size: 0.9rem;
+  color: #444;
+  letter-spacing: 0.1em;
+}
 </style>
 </head>
 <body>
@@ -725,35 +767,25 @@ header .subtitle {
     </div>
   </div>
 
-  <!-- HOST FLOW -->
+  <!-- HOST FLOW (Server-based) -->
   <div class="mp-panel" id="mp-host-panel">
-    <div class="mp-status" id="mp-host-status">준비 중...</div>
+    <div class="mp-status" id="mp-host-status">방 생성 중...</div>
     <div class="mp-step-text" id="mp-host-step"></div>
-    <div class="mp-code-section" id="mp-host-offer-section">
-      <label class="mp-code-label">▼ 이 코드를 상대방에게 보내세요</label>
-      <textarea class="mp-code-textarea" id="mp-host-offer-text" readonly rows="5"></textarea>
+    <div class="mp-code-section" id="mp-host-code-section" style="display:none;">
+      <label class="mp-code-label">▼ 상대방에게 공유할 방 코드입니다</label>
+      <div class="mp-room-code" id="mp-host-code"></div>
       <button class="mp-copy-btn" id="mp-host-copy-btn">📋 복사</button>
-    </div>
-    <div class="mp-code-section" id="mp-host-answer-section" style="display:none;">
-      <label class="mp-code-label">▼ 상대방의 답변 코드를 여기에 붙여넣으세요</label>
-      <textarea class="mp-code-textarea" id="mp-host-answer-input" rows="5" placeholder="여기에 상대방이 보낸 코드를 붙여넣으세요..."></textarea>
-      <button class="mp-apply-btn" id="mp-host-apply-btn">✅ 적용</button>
     </div>
   </div>
 
-  <!-- GUEST FLOW -->
+  <!-- GUEST FLOW (Server-based) -->
   <div class="mp-panel" id="mp-guest-panel">
-    <div class="mp-status" id="mp-guest-status">준비 중...</div>
+    <div class="mp-status" id="mp-guest-status">호스트의 방 코드를 입력하세요</div>
     <div class="mp-step-text" id="mp-guest-step"></div>
-    <div class="mp-code-section" id="mp-guest-offer-section">
-      <label class="mp-code-label">▼ 호스트가 보낸 코드를 여기에 붙여넣으세요</label>
-      <textarea class="mp-code-textarea" id="mp-guest-offer-input" rows="5" placeholder="여기에 호스트가 보낸 코드를 붙여넣으세요..."></textarea>
-      <button class="mp-apply-btn" id="mp-guest-apply-btn">✅ 연결</button>
-    </div>
-    <div class="mp-code-section" id="mp-guest-answer-section" style="display:none;">
-      <label class="mp-code-label">▼ 이 코드를 호스트에게 보내세요</label>
-      <textarea class="mp-code-textarea" id="mp-guest-answer-text" readonly rows="5"></textarea>
-      <button class="mp-copy-btn" id="mp-guest-copy-btn">📋 복사</button>
+    <div class="mp-code-section" id="mp-guest-code-section">
+      <label class="mp-code-label">▼ 방 코드 입력 (4자리)</label>
+      <input type="text" class="mp-code-input" id="mp-guest-code-input" maxlength="4" placeholder="EX: A3K9" autocomplete="off" />
+      <button class="mp-apply-btn" id="mp-guest-join-btn">✅ 입장</button>
     </div>
   </div>
 
@@ -828,17 +860,12 @@ let scores = { O: 0, X: 0 };
 let current = 'O';
 let status = 'PLAYING';
 
-// Multiplayer state
-let gameMode = 'local';  // 'local' | 'multiplayer_host' | 'multiplayer_guest'
+// Multiplayer state (Server-based)
+let gameMode = 'local';  // 'local' | 'host' | 'guest'
 let myRole = null;        // 'O' (host) | 'X' (guest)
 let isRemoteMove = false;
-let peerConnection = null;
-let dataChannel = null;
-let collectedCandidates = [];
-
-const STUN_SERVERS = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-};
+let wsConnection = null;
+let mpRoomCode = null;
 
 // ═══════════════════════════════════════
 //  DOM REFS
@@ -884,7 +911,7 @@ function showMainScreen() {
   mainScreen.classList.remove('hidden');
   gameMode = 'local';
   myRole = null;
-  cleanupPeerConnection();
+  cleanupWebSocket();
 }
 
 function showGameScreen() {
@@ -949,7 +976,7 @@ function renderScore() {
 function renderTurn() {
   if (status !== 'PLAYING') { turnEl.innerHTML = ''; return; }
   let label = `<span class="turn-${current.toLowerCase()}">Player ${current}</span>의 턴`;
-  if (gameMode.startsWith('multiplayer')) {
+  if (gameMode !== 'local') {
     label += current === myRole ? ' (나의 턴)' : ' (대기 중)';
   }
   turnEl.innerHTML = label;
@@ -1017,14 +1044,14 @@ function handleClick(r, c) {
   }
 
   // multiplayer: only allow on my turn
-  if (gameMode.startsWith('multiplayer') && !isRemoteMove && current !== myRole) {
+  if (gameMode !== 'local' && !isRemoteMove && current !== myRole) {
     return;
   }
 
   placeMark(r, c);
 
   // multiplayer: send my move to peer
-  if (gameMode.startsWith('multiplayer') && !isRemoteMove) {
+  if (gameMode !== 'local' && !isRemoteMove) {
     sendToPeer({ type: 'MOVE', payload: { r, c }, ts: Date.now() });
   }
 }
@@ -1109,13 +1136,13 @@ function endGame(winner) {
   winTextEl.className = winner.toLowerCase();
   overlayEl.classList.add('show');
 
-  if (gameMode.startsWith('multiplayer')) {
+  if (gameMode !== 'local') {
     sendToPeer({ type: 'GAME_OVER', payload: { winner }, ts: Date.now() });
   }
 }
 
 // ═══════════════════════════════════════
-//  MULTIPLAYER — P2P (WebRTC + Text Copy-Paste)
+//  MULTIPLAYER — WebSocket (Server-based)
 // ═══════════════════════════════════════
 
 function resetMPLobby() {
@@ -1124,371 +1151,177 @@ function resetMPLobby() {
   mpGuestPanel.classList.remove('visible');
   mpHostStep.textContent = '';
   mpGuestStep.textContent = '';
+  document.getElementById('mp-host-code-section').style.display = 'none';
+  document.getElementById('mp-guest-code-section').style.display = 'flex';
+  document.getElementById('mp-guest-code-input').value = '';
+  cleanupWebSocket();
 }
 
-// --- WebRTC ---
-function createPeerConnection() {
-  cleanupPeerConnection();
-  peerConnection = new RTCPeerConnection(STUN_SERVERS);
-  collectedCandidates = [];
+// ─── WebSocket Connection ───
 
-  peerConnection.onicecandidate = (ev) => {
-    if (ev.candidate) collectedCandidates.push(ev.candidate.toJSON());
-  };
+function connectWebSocket() {
+  cleanupWebSocket();
+  wsConnection = new WebSocket(SERVER_URL);
 
-  peerConnection.ondatachannel = (ev) => {
-    dataChannel = ev.channel;
-    setupDataChannel(dataChannel);
-  };
-
-  peerConnection.onconnectionstatechange = () => {
-    const s = peerConnection.connectionState;
-    if (s === 'connected') {
-      updateMPStatus('연결 성공! 게임을 시작합니다', 'connected');
-      setTimeout(() => startMultiplayerGame(), 500);
-    } else if (['failed','disconnected','closed'].includes(s)) {
-      updateMPStatus('연결이 끊어졌습니다', 'error');
+  wsConnection.onclose = () => {
+    console.log('[WS] Disconnected');
+    if (gameMode !== 'local') {
+      updateMPStatus('서버 연결이 끊어졌습니다', 'error');
       gameMode = 'local';
       myRole = null;
     }
   };
 
-  return peerConnection;
-}
-
-function cleanupPeerConnection() {
-  if (dataChannel) { try { dataChannel.close(); } catch(e) {} dataChannel = null; }
-  if (peerConnection) { try { peerConnection.close(); } catch(e) {} peerConnection = null; }
-  collectedCandidates = [];
-}
-
-function setupDataChannel(ch) {
-  ch.onopen = () => {
-    console.log('[P2P] DataChannel open');
-    if (gameMode === 'multiplayer_host') sendSync();
+  wsConnection.onerror = () => {
+    console.error('[WS] Error');
+    updateMPStatus('서버 연결 실패', 'error');
   };
-  ch.onmessage = (ev) => {
+
+  wsConnection.onmessage = (ev) => {
     try {
       const msg = JSON.parse(ev.data);
-      handlePeerMessage(msg);
+      handleServerMessage(msg);
     } catch (e) {
-      console.error('[P2P] Invalid message:', ev.data);
+      console.error('[WS] Invalid message:', ev.data);
     }
   };
-  ch.onclose = () => {
-    console.log('[P2P] DataChannel closed');
-  };
 }
 
-// --- SDP → Minimal signal format (extract only essential fields) ---
-// Instead of sending the full SDP text (~3-4KB), we extract only
-// the fields needed to reconstruct the session description.
-// This brings the payload down to ~200-400 bytes before compression.
-
-function sdpToMini(sdpObj) {
-  const sdp = sdpObj.sdp;
-  const lines = sdp.split('\r\n');
-  const mini = { type: sdpObj.type };
-
-  // Extract ice-ufrag and ice-pwd from session level
-  for (const line of lines) {
-    if (line.startsWith('a=ice-ufrag:')) mini.u = line.slice(12);
-    if (line.startsWith('a=ice-pwd:')) mini.p = line.slice(10);
-    if (line.startsWith('a=fingerprint:')) mini.f = line.slice(14);
+function cleanupWebSocket() {
+  if (wsConnection) {
+    try { wsConnection.close(); } catch(e) {}
+    wsConnection = null;
   }
+}
 
-  // Extract fingerprint from media level (overrides session level if present)
-  let inMedia = false;
-  for (const line of lines) {
-    if (line.startsWith('m=')) inMedia = true;
-    if (inMedia && line.startsWith('a=fingerprint:')) mini.f = line.slice(14);
-    if (inMedia && line.startsWith('a=setup:')) mini.s = line.slice(9);
-    if (inMedia && line.startsWith('a=mid:')) mini.mid = line.slice(6);
-  }
+// ─── Server Message Handler ───
 
-  // Extract candidates (IP:port from a=candidate lines)
-  mini.c = [];
-  for (const line of lines) {
-    if (line.startsWith('a=candidate:')) {
-      const parts = line.slice(12).split(' ');
-      // parts: foundation component-id protocol ip port ...
-      const proto = parts[2]; // 'udp' or 'tcp'
-      const ip = parts[4];
-      const port = parts[5];
-      const typIdx = parts.indexOf('typ');
-      const typ = typIdx >= 0 ? parts[typIdx + 1] : 'host';
-      // Only include udp host/srflx candidates (skip tcp, relay)
-      if (proto === 'udp' && (typ === 'host' || typ === 'srflx')) {
-        mini.c.push(ip + ':' + port + '/' + typ);
-      }
+function handleServerMessage(msg) {
+  switch (msg.type) {
+
+    case 'ROOM_CREATED': {
+      mpRoomCode = msg.payload.code;
+      document.getElementById('mp-host-code-section').style.display = 'flex';
+      document.getElementById('mp-host-code').textContent = mpRoomCode;
+      mpHostStatus.textContent = '상대방이 입장할 때까지 기다리는 중...';
+      mpHostStatus.className = 'mp-status';
+      mpHostStep.textContent = '위 방 코드를 친구에게 공유하세요';
+      break;
+    }
+
+    case 'ROOM_JOINED': {
+      mpRoomCode = msg.payload.code;
+      startMultiplayerGame();
+      break;
+    }
+
+    case 'PEER_JOINED': {
+      mpHostStatus.textContent = '상대방이 입장했습니다! 게임을 시작합니다';
+      mpHostStatus.className = 'mp-status connected';
+      mpHostStep.textContent = '';
+      setTimeout(() => startMultiplayerGame(), 500);
+      break;
+    }
+
+    case 'PEER_DISCONNECTED': {
+      updateMPStatus('상대방이 연결을 끊었습니다', 'error');
+      gameMode = 'local';
+      myRole = null;
+      break;
+    }
+
+    case 'GAME_MESSAGE': {
+      handlePeerMessage(msg.payload);
+      break;
+    }
+
+    case 'ERROR': {
+      updateMPStatus('오류: ' + (msg.payload || '알 수 없는 오류'), 'error');
+      break;
     }
   }
-
-  return mini;
 }
 
-function miniToSDP(mini) {
-  // Reconstruct a valid SDP from mini format
-  const candidates = (mini.c || []).map(c => {
-    const [addr, rest] = c.split(':');
-    const [port, typ] = rest.split('/');
-    const foundation = typ === 'host' ? '0' : '1';
-    return `a=candidate:${foundation} 1 udp 1 ${addr} ${port} typ ${typ}`;
-  });
+// ─── Host Flow ───
 
-  // Build minimal SDP that browsers accept for datachannel
-  let sdp = [
-    'v=0',
-    'o=- 0 1 IN IP4 0.0.0.0',
-    's=-',
-    't=0 0',
-    'a=group:BUNDLE 0',
-    'a=extmap-allow-mixed',
-    'a=msid-semantic:WMS',
-    `a=ice-ufrag:${mini.u}`,
-    `a=ice-pwd:${mini.p}`,
-    mini.f ? `a=fingerprint:${mini.f}` : '',
-    'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
-    'c=IN IP4 0.0.0.0',
-    'a=ice-ufrag:' + mini.u,
-    'a=ice-pwd:' + mini.p,
-    mini.f ? 'a=fingerprint:' + mini.f : '',
-    `a=setup:${mini.s || 'actpass'}`,
-    'a=mid:' + (mini.mid || '0'),
-    'a=sctp-port:5000',
-    'a=max-message-size:65536',
-    ...candidates
-  ].filter(Boolean).join('\r\n') + '\r\n';
-
-  // Normalize: ensure ice-ufrag/ice-pwd only at media level
-  // (some browsers prefer session level, some media level — include both)
-
-  return { type: mini.type, sdp };
-}
-
-function sdpToMini(sdpObj) {
-  const sdp = sdpObj.sdp;
-  const lines = sdp.split('\r\n');
-  const mini = { type: sdpObj.type };
-
-  // Extract ice-ufrag and ice-pwd from session level
-  for (const line of lines) {
-    if (line.startsWith('a=ice-ufrag:')) mini.u = line.slice(12);
-    if (line.startsWith('a=ice-pwd:')) mini.p = line.slice(10);
-    if (line.startsWith('a=fingerprint:')) mini.f = line.slice(14);
-  }
-
-  // Extract fingerprint from media level (overrides session level if present)
-  let inMedia = false;
-  for (const line of lines) {
-    if (line.startsWith('m=')) inMedia = true;
-    if (inMedia && line.startsWith('a=fingerprint:')) mini.f = line.slice(14);
-    if (inMedia && line.startsWith('a=setup:')) mini.s = line.slice(9);
-    if (inMedia && line.startsWith('a=mid:')) mini.mid = line.slice(6);
-  }
-
-  // Extract candidates (IP:port from a=candidate lines)
-  mini.c = [];
-  for (const line of lines) {
-    if (line.startsWith('a=candidate:')) {
-      const parts = line.slice(12).split(' ');
-      // parts: foundation component-id protocol ip port ...
-      const proto = parts[2]; // 'udp' or 'tcp'
-      const ip = parts[4];
-      const port = parts[5];
-      const typIdx = parts.indexOf('typ');
-      const typ = typIdx >= 0 ? parts[typIdx + 1] : 'host';
-      // Only include udp host/srflx candidates (skip tcp, relay)
-      if (proto === 'udp' && (typ === 'host' || typ === 'srflx')) {
-        mini.c.push(ip + ':' + port + '/' + typ);
-      }
-    }
-  }
-
-  return mini;
-}
-
-function miniToSDP(mini) {
-  // Reconstruct a valid SDP from mini format
-  const candidates = (mini.c || []).map(c => {
-    const [addr, rest] = c.split(':');
-    const [port, typ] = rest.split('/');
-    const foundation = typ === 'host' ? '0' : '1';
-    return `a=candidate:${foundation} 1 udp 1 ${addr} ${port} typ ${typ}`;
-  });
-
-  // Build minimal SDP that browsers accept for datachannel
-  let sdp = [
-    'v=0',
-    'o=- 0 1 IN IP4 0.0.0.0',
-    's=-',
-    't=0 0',
-    'a=group:BUNDLE 0',
-    'a=extmap-allow-mixed',
-    'a=msid-semantic:WMS',
-    `a=ice-ufrag:${mini.u}`,
-    `a=ice-pwd:${mini.p}`,
-    mini.f ? `a=fingerprint:${mini.f}` : '',
-    'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
-    'c=IN IP4 0.0.0.0',
-    'a=ice-ufrag:' + mini.u,
-    'a=ice-pwd:' + mini.p,
-    mini.f ? 'a=fingerprint:' + mini.f : '',
-    `a=setup:${mini.s || 'actpass'}`,
-    'a=mid:' + (mini.mid || '0'),
-    'a=sctp-port:5000',
-    'a=max-message-size:65536',
-    ...candidates
-  ].filter(Boolean).join('\r\n') + '\r\n';
-
-  // Normalize: ensure ice-ufrag/ice-pwd only at media level
-  // (some browsers prefer session level, some media level — include both)
-
-  return { type: mini.type, sdp };
-}
-
-
-
-// --- Host Flow (Text Copy-Paste) ---
 async function startAsHost() {
-  gameMode = 'multiplayer_host';
+  gameMode = 'host';
   myRole = 'O';
 
   mpModeSelect.style.display = 'none';
   mpHostPanel.classList.add('visible');
-  mpHostStatus.textContent = 'Offer를 생성하는 중...';
-  mpHostStep.textContent = '잠시만 기다려주세요...';
-  document.getElementById('mp-host-offer-section').style.display = 'none';
-  document.getElementById('mp-host-answer-section').style.display = 'none';
+  document.getElementById('mp-host-code-section').style.display = 'none';
+  mpHostStatus.textContent = '서버에 연결 중...';
+  mpHostStep.textContent = '';
+  mpHostStatus.className = 'mp-status';
 
-  try {
-    createPeerConnection();
-    dataChannel = peerConnection.createDataChannel('game', { ordered: true });
-    setupDataChannel(dataChannel);
+  connectWebSocket();
 
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
+  // Wait for connection then send CREATE_ROOM
+  wsConnection.onopen = () => {
+    console.log('[WS] Connected, creating room...');
+    mpHostStatus.textContent = '방을 생성하는 중...';
+    wsConnection.send(JSON.stringify({ type: 'CREATE_ROOM' }));
+  };
 
-    await waitForICEGathering(3000);
-
-    const miniOffer = sdpToMini(peerConnection.localDescription);
-    const offerText = JSON.stringify(miniOffer);
-
-    mpHostStatus.textContent = '1/2: 아래 코드를 상대방에게 보내세요';
-    mpHostStep.textContent = '상대방이 이 코드를 복사한 후 답변 코드를 보내면 여기에 붙여넣으세요';
-    document.getElementById('mp-host-offer-section').style.display = 'flex';
-    document.getElementById('mp-host-offer-text').value = offerText;
-    document.getElementById('mp-host-answer-section').style.display = 'flex';
-
-    // Copy button
-    document.getElementById('mp-host-copy-btn').onclick = () => {
-      const ta = document.getElementById('mp-host-offer-text');
+  // Copy button for room code
+  document.getElementById('mp-host-copy-btn').onclick = () => {
+    const code = document.getElementById('mp-host-code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      alert('방 코드가 복사되었습니다!');
+    }).catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = code;
+      document.body.appendChild(ta);
       ta.select();
-      navigator.clipboard.writeText(ta.value).then(() => {
-        alert('코드가 복사되었습니다!');
-      }).catch(() => {
-        ta.select();
-        document.execCommand('copy');
-        alert('코드가 복사되었습니다!');
-      });
-    };
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      alert('방 코드가 복사되었습니다!');
+    });
+  };
+}
 
-    // Apply button for guest's answer
-    document.getElementById('mp-host-apply-btn').onclick = async () => {
-      const answerText = document.getElementById('mp-host-answer-input').value.trim();
-      if (!answerText) { alert('코드를 붙여넣은 후 적용 버튼을 눌러주세요.'); return; }
-      try {
-        const miniAnswer = JSON.parse(answerText);
-        if (miniAnswer.type !== 'answer') { alert('유효하지 않은 답변 코드입니다.'); return; }
-        await peerConnection.setRemoteDescription(miniToSDP(miniAnswer));
-        mpHostStatus.textContent = '연결 수립 중...';
-        mpHostStep.textContent = '';
-        document.getElementById('mp-host-apply-btn').disabled = true;
-      } catch (e) {
-        alert('연결 설정 실패: ' + e.message);
-      }
-    };
-  } catch (e) {
-    mpHostStatus.textContent = '오류: ' + e.message;
-    mpHostStatus.className = 'mp-status error';
-  }
-}// --- Guest Flow (Text Copy-Paste) ---
+// ─── Guest Flow ───
+
 async function startAsGuest() {
-  gameMode = 'multiplayer_guest';
+  gameMode = 'guest';
   myRole = 'X';
 
   mpModeSelect.style.display = 'none';
   mpGuestPanel.classList.add('visible');
-  mpGuestStatus.textContent = '1/2: 호스트의 코드를 붙여넣으세요';
-  mpGuestStep.textContent = '호스트가 보낸 코드를 아래에 붙여넣고 [연결] 버튼을 누르세요';
-  document.getElementById('mp-guest-offer-section').style.display = 'flex';
-  document.getElementById('mp-guest-answer-section').style.display = 'none';
+  document.getElementById('mp-guest-code-section').style.display = 'flex';
+  mpGuestStatus.textContent = '방 코드를 입력하세요';
+  mpGuestStep.textContent = '';
+  mpGuestStatus.className = 'mp-status';
 
-  // Apply button for host's offer
-  document.getElementById('mp-guest-apply-btn').onclick = async () => {
-    const offerText = document.getElementById('mp-guest-offer-input').value.trim();
-    if (!offerText) { alert('호스트의 코드를 붙여넣은 후 연결 버튼을 눌러주세요.'); return; }
-    try {
-      const miniOffer = JSON.parse(offerText);
-      if (miniOffer.type !== 'offer') { alert('유효하지 않은 호스트 코드입니다.'); return; }
-
-      mpGuestStatus.textContent = 'Answer를 생성하는 중...';
-      mpGuestStep.textContent = '잠시만 기다려주세요...';
-      document.getElementById('mp-guest-offer-section').style.display = 'none';
-
-      createPeerConnection();
-      await peerConnection.setRemoteDescription(miniToSDP(miniOffer));
-
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-
-      await waitForICEGathering(3000);
-
-      const miniAnswer = sdpToMini(peerConnection.localDescription);
-      const answerText = JSON.stringify(miniAnswer);
-
-      mpGuestStatus.textContent = '2/2: 아래 코드를 호스트에게 보내세요';
-      mpGuestStep.textContent = '호스트가 이 코드를 붙여넣으면 연결됩니다';
-      document.getElementById('mp-guest-answer-section').style.display = 'flex';
-      document.getElementById('mp-guest-answer-text').value = answerText;
-
-      document.getElementById('mp-guest-copy-btn').onclick = () => {
-        const ta = document.getElementById('mp-guest-answer-text');
-        ta.select();
-        navigator.clipboard.writeText(ta.value).then(() => {
-          alert('코드가 복사되었습니다!');
-        }).catch(() => {
-          ta.select();
-          document.execCommand('copy');
-          alert('코드가 복사되었습니다!');
-        });
-      };
-    } catch (e) {
-      mpGuestStatus.textContent = '오류: ' + e.message;
-      mpGuestStatus.className = 'mp-status error';
-    }
-  };
-}// --- ICE Gathering Helper ---
-function waitForICEGathering(timeout) {
-  return new Promise((resolve) => {
-    if (peerConnection.iceGatheringState === 'complete') {
-      resolve();
+  // Join button
+  document.getElementById('mp-guest-join-btn').onclick = () => {
+    const code = document.getElementById('mp-guest-code-input').value.trim().toUpperCase();
+    if (!code || code.length !== 4) {
+      alert('4자리 방 코드를 입력해주세요.');
       return;
     }
-    const timer = setTimeout(resolve, timeout);
-    peerConnection.onicegatheringstatechange = () => {
-      if (peerConnection.iceGatheringState === 'complete') {
-        clearTimeout(timer);
-        resolve();
-      }
+
+    mpGuestStatus.textContent = '서버에 연결 중...';
+    mpGuestStep.textContent = '잠시만 기다려주세요...';
+    document.getElementById('mp-guest-code-section').style.display = 'none';
+
+    connectWebSocket();
+
+    wsConnection.onopen = () => {
+      console.log('[WS] Connected, joining room', code);
+      mpGuestStatus.textContent = '방에 입장하는 중...';
+      wsConnection.send(JSON.stringify({ type: 'JOIN_ROOM', payload: { code } }));
     };
-  });
+  };
 }
 
-// --- Messaging ---
+// ─── Messaging ───
+
 function sendToPeer(msg) {
-  if (dataChannel && dataChannel.readyState === 'open') {
-    dataChannel.send(JSON.stringify(msg));
+  if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
+    wsConnection.send(JSON.stringify({ type: 'GAME_MESSAGE', payload: msg }));
   }
 }
 
@@ -1496,22 +1329,10 @@ function sendMove(r, c) {
   sendToPeer({ type: 'MOVE', payload: { r, c }, ts: Date.now() });
 }
 
-function sendSync() {
-  const serializableBoard = board.map(row => row.map(cell => ({
-    value: cell.value,
-    blockedDirs: [...cell.blockedDirs]
-  })));
-  sendToPeer({
-    type: 'SYNC',
-    payload: { board: serializableBoard, scores, current, status },
-    ts: Date.now()
-  });
-}
-
 function handlePeerMessage(msg) {
   switch (msg.type) {
     case 'MOVE':
-      if (gameMode.startsWith('multiplayer')) {
+      if (gameMode !== 'local') {
         isRemoteMove = true;
         placeMark(msg.payload.r, msg.payload.c);
         isRemoteMove = false;
@@ -1519,7 +1340,7 @@ function handlePeerMessage(msg) {
       break;
 
     case 'SYNC':
-      if (gameMode === 'multiplayer_guest') {
+      if (gameMode === 'guest') {
         board = msg.payload.board.map(row => row.map(cell => ({
           value: cell.value,
           blockedDirs: [...cell.blockedDirs]
@@ -1534,26 +1355,22 @@ function handlePeerMessage(msg) {
       break;
 
     case 'GAME_OVER':
-      if (gameMode.startsWith('multiplayer')) {
+      if (gameMode !== 'local') {
         endGame(msg.payload.winner);
       }
       break;
 
     case 'RESTART_REQ':
-      if (gameMode.startsWith('multiplayer')) {
+      if (gameMode !== 'local') {
         init();
         sendToPeer({ type: 'RESTART_ACK', ts: Date.now() });
       }
       break;
 
     case 'RESTART_ACK':
-      if (gameMode.startsWith('multiplayer')) {
+      if (gameMode !== 'local') {
         init();
       }
-      break;
-
-    case 'PING':
-      sendToPeer({ type: 'PONG', ts: Date.now() });
       break;
   }
 }
@@ -1565,7 +1382,7 @@ function startMultiplayerGame() {
 }
 
 function updateMPStatus(text, cls) {
-  const el = gameMode === 'multiplayer_host' ? mpHostStatus : mpGuestStatus;
+  const el = gameMode === 'host' ? mpHostStatus : mpGuestStatus;
   if (el) {
     el.textContent = text;
     el.className = 'mp-status ' + (cls || '');
@@ -1602,7 +1419,7 @@ mpJoin.addEventListener('click', startAsGuest);
 // Game controls
 restartBtn.addEventListener('click', showMainScreen);
 restartGameBtn.addEventListener('click', () => {
-  if (gameMode.startsWith('multiplayer')) {
+  if (gameMode !== 'local') {
     sendToPeer({ type: 'RESTART_REQ', ts: Date.now() });
     init(); // optimistic restart
   } else {
@@ -1611,7 +1428,7 @@ restartGameBtn.addEventListener('click', () => {
 });
 overlayBtn.addEventListener('click', () => {
   overlayEl.classList.remove('show');
-  if (gameMode.startsWith('multiplayer')) {
+  if (gameMode !== 'local') {
     sendToPeer({ type: 'RESTART_REQ', ts: Date.now() });
   }
   init();

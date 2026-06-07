@@ -13,6 +13,7 @@
   "dependencies": {
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
-    "@capacitor/ios": "^8.3.4"
+    "@capacitor/ios": "^8.3.4",
+    "ws": "^8.21.0"
   }
 }
