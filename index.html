@@ -1146,83 +1146,111 @@ function setupDataChannel(ch) {
   };
 }
 
-// --- SDP Slimming (strip unnecessary media lines for datachannel-only) ---
-function slimSDP(sdpStr) {
-  const skipPrefixes = [
-    'a=rtpmap:', 'a=rtcp:', 'a=extmap:', 'a=fmtp:',
-    'a=ice-pwd:', 'a=ice-ufrag:', 'a=setup:', 'a=mid:',
-    'a=msid-semantic:', 'a=ssrc:', 'a=ssrc-group:',
-    'a=rtcp-fb:', 'a=rid:', 'a=simulcast:'
-  ];
-  return sdpStr.split('\r\n').filter(line => {
-    if (!line) return false;
-    return !skipPrefixes.some(prefix => line.startsWith(prefix));
-  }).join('\r\n');
-}
+// --- SDP → Minimal signal format (extract only essential fields) ---
+// Instead of sending the full SDP text (~3-4KB), we extract only
+// the fields needed to reconstruct the session description.
+// This brings the payload down to ~200-400 bytes before compression.
 
-// --- Compression helpers (pako deflateRaw + base85) ---
-const B85_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!$%&*+-=?@^_~';
+function sdpToMini(sdpObj) {
+  const sdp = sdpObj.sdp;
+  const lines = sdp.split('\r\n');
+  const mini = { type: sdpObj.type };
 
-function uint8ToBase85(bytes) {
-  let result = '';
-  const len = bytes.length;
-  let i = 0;
-  while (i < len) {
-    let n = 0;
-    let chunkLen = 0;
-    for (let j = 0; j < 4 && i < len; j++, i++) {
-      n = n * 256 + bytes[i];
-      chunkLen++;
-    }
-    const digits = [];
-    for (let j = 0; j < 5; j++) {
-      digits.push(n % 85);
-      n = Math.floor(n / 85);
-    }
-    const emitCount = chunkLen + 1;
-    for (let j = emitCount - 1; j >= 0; j--) {
-      result += B85_CHARS[digits[j]];
+  // Extract ice-ufrag and ice-pwd from session level
+  for (const line of lines) {
+    if (line.startsWith('a=ice-ufrag:')) mini.u = line.slice(12);
+    if (line.startsWith('a=ice-pwd:')) mini.p = line.slice(10);
+    if (line.startsWith('a=fingerprint:')) mini.f = line.slice(14);
+  }
+
+  // Extract fingerprint from media level (overrides session level if present)
+  let inMedia = false;
+  for (const line of lines) {
+    if (line.startsWith('m=')) inMedia = true;
+    if (inMedia && line.startsWith('a=fingerprint:')) mini.f = line.slice(14);
+    if (inMedia && line.startsWith('a=setup:')) mini.s = line.slice(9);
+    if (inMedia && line.startsWith('a=mid:')) mini.mid = line.slice(6);
+  }
+
+  // Extract candidates (IP:port from a=candidate lines)
+  mini.c = [];
+  for (const line of lines) {
+    if (line.startsWith('a=candidate:')) {
+      const parts = line.slice(12).split(' ');
+      // parts: foundation component-id protocol ip port ...
+      const proto = parts[2]; // 'udp' or 'tcp'
+      const ip = parts[4];
+      const port = parts[5];
+      const typIdx = parts.indexOf('typ');
+      const typ = typIdx >= 0 ? parts[typIdx + 1] : 'host';
+      // Only include udp host/srflx candidates (skip tcp, relay)
+      if (proto === 'udp' && (typ === 'host' || typ === 'srflx')) {
+        mini.c.push(ip + ':' + port + '/' + typ);
+      }
     }
   }
-  return result;
+
+  return mini;
 }
 
-function base85ToUint8(str) {
-  const result = [];
-  const len = str.length;
-  let i = 0;
-  while (i < len) {
-    const chunk = [];
-    while (chunk.length < 5 && i < len) {
-      const idx = B85_CHARS.indexOf(str[i]);
-      if (idx !== -1) chunk.push(idx);
-      i++;
-    }
-    let n = 0;
-    for (let j = 0; j < chunk.length; j++) {
-      n = n * 85 + chunk[j];
-    }
-    const byteCount = chunk.length - 1;
-    const bytes = [];
-    for (let j = 0; j < byteCount; j++) {
-      bytes.push(n & 0xFF);
-      n = Math.floor(n / 256);
-    }
-    for (let j = bytes.length - 1; j >= 0; j--) {
-      result.push(bytes[j]);
-    }
-  }
-  return new Uint8Array(result);
+function miniToSDP(mini) {
+  // Reconstruct a valid SDP from mini format
+  const candidates = (mini.c || []).map(c => {
+    const [addr, rest] = c.split(':');
+    const [port, typ] = rest.split('/');
+    const foundation = typ === 'host' ? '0' : '1';
+    return `a=candidate:${foundation} 1 udp 1 ${addr} ${port} typ ${typ}`;
+  });
+
+  // Build minimal SDP that browsers accept for datachannel
+  let sdp = [
+    'v=0',
+    'o=- 0 1 IN IP4 0.0.0.0',
+    's=-',
+    't=0 0',
+    'a=group:BUNDLE 0',
+    'a=extmap-allow-mixed',
+    'a=msid-semantic:WMS',
+    `a=ice-ufrag:${mini.u}`,
+    `a=ice-pwd:${mini.p}`,
+    mini.f ? `a=fingerprint:${mini.f}` : '',
+    'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
+    'c=IN IP4 0.0.0.0',
+    'a=ice-ufrag:' + mini.u,
+    'a=ice-pwd:' + mini.p,
+    mini.f ? 'a=fingerprint:' + mini.f : '',
+    `a=setup:${mini.s || 'actpass'}`,
+    'a=mid:' + (mini.mid || '0'),
+    'a=sctp-port:5000',
+    'a=max-message-size:65536',
+    ...candidates
+  ].filter(Boolean).join('\r\n') + '\r\n';
+
+  // Normalize: ensure ice-ufrag/ice-pwd only at media level
+  // (some browsers prefer session level, some media level — include both)
+
+  return { type: mini.type, sdp };
 }
 
+// --- Compression helpers (pako deflateRaw + base64url compact) ---
 function compressForQR(obj) {
   const json = JSON.stringify(obj);
   const compressed = pako.deflateRaw(new TextEncoder().encode(json));
-  return uint8ToBase85(compressed);
+  // btoa but URL-safe
+  let binary = '';
+  for (let i = 0; i < compressed.length; i++) {
+    binary += String.fromCharCode(compressed[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function decompressFromQR(str) {
-  const bytes = base85ToUint8(str);
+  // Restore base64url → standard base64 → decode
+  let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   const decompressed = pako.inflateRaw(bytes);
   return JSON.parse(new TextDecoder().decode(decompressed));
 }
@@ -1232,19 +1260,24 @@ async function generateQR(data, container) {
   container.innerHTML = '';
   try {
     const compressed = compressForQR(data);
-    console.log(`[QR] 원본 ${JSON.stringify(data).length}B → 압축 ${compressed.length}자`);
+    const origLen = JSON.stringify(data).length;
+    console.log(`[QR] 원본 ${origLen}B → 압축 ${compressed.length}자`);
+
+    if (compressed.length > 2000) {
+      throw new Error(`압축 후에도 ${compressed.length}자로 QR 한도 초과`);
+    }
 
     const canvas = document.createElement('canvas');
     await QRCode.toCanvas(canvas, compressed, {
-      width: 220,
-      margin: 2,
+      width: 240,
+      margin: 1,
       errorCorrectionLevel: 'L',
       color: { dark: '#000000', light: '#ffffff' }
     });
     container.appendChild(canvas);
   } catch (e) {
     console.error('[QR] Generation failed:', e);
-    container.innerHTML = '<p style="color:#e74c3c;font-size:0.8rem;padding:1rem;">QR 생성 실패<br>데이터가 너무 큽니다</p>';
+    container.innerHTML = '<p style="color:#e74c3c;font-size:0.75rem;padding:1rem;text-align:center;">QR 생성 실패<br>' + e.message + '</p>';
   }
 }
 
@@ -1303,20 +1336,17 @@ async function startAsHost() {
   // Wait for ICE gathering
   await waitForICEGathering(3000);
 
-  const signalData = {
-    type: 'offer',
-    sdp: peerConnection.localDescription.toJSON()
-  };
+  const miniOffer = sdpToMini(peerConnection.localDescription);
 
   mpHostStatus.textContent = 'Offer QR — 게스트가 스캔하세요';
-  await generateQR(signalData, mpHostQr);
+  await generateQR(miniOffer, mpHostQr);
 
   // Prepare Answer scan zone
   mpHostStep.textContent = '2/2: 게스트의 Answer QR 이미지를 선택하세요';
   createFileScanner(mpHostScanZone, async (data) => {
     if (data.type !== 'answer') { alert('유효하지 않은 QR입니다'); return; }
     try {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+      await peerConnection.setRemoteDescription(miniToSDP(data));
       mpHostStatus.textContent = '연결 수립 중...';
       mpHostStep.textContent = '';
     } catch (e) {
@@ -1341,7 +1371,7 @@ async function startAsGuest() {
     mpGuestStatus.textContent = 'Answer를 생성하는 중...';
 
     createPeerConnection();
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+    await peerConnection.setRemoteDescription(miniToSDP(data));
 
 
     const answer = await peerConnection.createAnswer();
@@ -1349,16 +1379,13 @@ async function startAsGuest() {
 
     await waitForICEGathering(3000);
 
-    const signalData = {
-      type: 'answer',
-      sdp: peerConnection.localDescription.toJSON()
-    };
+    const miniAnswer = sdpToMini(peerConnection.localDescription);
 
     mpGuestStatus.textContent = '2/2: 이 QR을 호스트에게 보여주세요';
     mpGuestStep.textContent = '호스트가 이 QR을 스캔하면 연결됩니다';
     mpGuestScanZone.style.display = 'none';
     mpGuestQr.style.display = 'flex';
-    await generateQR(signalData, mpGuestQr);
+    await generateQR(miniAnswer, mpGuestQr);
   });
 }
 
