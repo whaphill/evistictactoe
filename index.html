@@ -17,11 +17,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <!-- QR Code Generator -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="qrcode.min.js"></script>
 <!-- QR Code Scanner -->
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="html5-qrcode.min.js"></script>
 <!-- pako compression -->
-<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<script src="pako.min.js"></script>
 <style>
 *, *::before, *::after {
   box-sizing: border-box;
@@ -1268,13 +1268,28 @@ async function generateQR(data, container) {
     }
 
     const canvas = document.createElement('canvas');
-    await QRCode.toCanvas(canvas, compressed, {
-      width: 240,
-      margin: 1,
-      errorCorrectionLevel: 'L',
-      color: { dark: '#000000', light: '#ffffff' }
-    });
-    container.appendChild(canvas);
+    // qrcode-generator API: typeNumber=0 (auto), errorCorrectionLevel='L'
+ const qr = qrcode(0, 'L');
+ qr.addData(compressed);
+ qr.make();
+
+ const moduleCount = qr.getModuleCount();
+ const cellSize = Math.max(4, Math.floor(240 / moduleCount));
+ const size = moduleCount * cellSize;
+ canvas.width = size;
+ canvas.height = size;
+ const ctx = canvas.getContext('2d');
+ ctx.fillStyle = '#ffffff';
+ ctx.fillRect(0, 0, size, size);
+ ctx.fillStyle = '#000000';
+ for (let row = 0; row < moduleCount; row++) {
+ for (let col = 0; col < moduleCount; col++) {
+ if (qr.isDark(row, col)) {
+ ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+ }
+ }
+ }
+ container.appendChild(canvas);
   } catch (e) {
     console.error('[QR] Generation failed:', e);
     container.innerHTML = '<p style="color:#e74c3c;font-size:0.75rem;padding:1rem;text-align:center;">QR 생성 실패<br>' + e.message + '</p>';
