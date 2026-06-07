@@ -10,18 +10,18 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="evi's TicTacToe">
 <meta name="description" content="3목 틱택토 - 10점 먼저 이기는 사람이 승리">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="/evistictactoe/manifest.json">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0a0f' width='180' height='180' rx='40'/><text x='50%25' y='45%25' font-size='90' text-anchor='middle' dominant-baseline='central' fill='%23ff6b9d'>O</text><text x='70%25' y='70%25' font-size='60' text-anchor='middle' dominant-baseline='central' fill='%234ecdc4'>X</text></svg>">
 <title>evi's TicTacToe</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <!-- QR Code Generator -->
-<script src="qrcode.min.js"></script>
+<script src="/evistictactoe/qrcode.min.js"></script>
 <!-- QR Code Scanner -->
-<script src="html5-qrcode.min.js"></script>
+<script src="/evistictactoe/html5-qrcode.min.js"></script>
 <!-- pako compression -->
-<script src="pako.min.js"></script>
+<script src="/evistictactoe/pako.min.js"></script>
 <style>
 *, *::before, *::after {
   box-sizing: border-box;
@@ -1560,7 +1560,7 @@ overlayMainBtn.addEventListener('click', () => {
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
+    navigator.serviceWorker.register('/evistictactoe/sw.js')
       .then(reg => console.log('SW registered'))
       .catch(err => console.log('SW registration failed:', err));
   });

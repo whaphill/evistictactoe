@@ -1,11 +1,12 @@
-const CACHE_NAME = 'evi-tictactoe-v5';
+const CACHE_NAME = 'evi-tictactoe-v6';
+const BASE = '/evistictactoe/';
 const urlsToCache = [
-  '/index.html',
-  '/manifest.json',
-  '/qrcode.min.js',
-  '/html5-qrcode.min.js',
-  '/pako.min.js',
-  '/favicon.svg'
+  BASE + 'index.html',
+  BASE + 'manifest.json',
+  BASE + 'qrcode.min.js',
+  BASE + 'html5-qrcode.min.js',
+  BASE + 'pako.min.js',
+  BASE + 'favicon.svg'
 ];
 
 self.addEventListener('install', event => {

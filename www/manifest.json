@@ -2,7 +2,7 @@
   "name": "evi's TicTacToe",
   "short_name": "eviTicTacToe",
   "description": "3목 틱택토 - 10점 먼저 이기는 사람이 승리",
-  "start_url": "/index.html",
+  "start_url": "/evistictactoe/",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#0a0a0f",
@@ -21,7 +21,11 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["games", "entertainment"],
+  "categories": [
+    "games",
+    "entertainment"
+  ],
   "lang": "ko",
-  "dir": "ltr"
+  "dir": "ltr",
+  "scope": "/evistictactoe/"
 }
