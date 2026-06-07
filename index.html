@@ -16,12 +16,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-<!-- QR Code Generator -->
-<script src="/evistictactoe/qrcode.min.js"></script>
-<!-- QR Code Scanner -->
-<script src="/evistictactoe/jsQR.js"></script>
-<!-- pako compression -->
-<script src="/evistictactoe/pako.min.js"></script>
 <style>
 *, *::before, *::after {
   box-sizing: border-box;
@@ -756,6 +750,24 @@ header .subtitle {
 </div>
 
 <script>
+// Dynamic library loader — failure-safe
+window._libsReady = false;
+function loadScripts(urls, cb) {
+  let loaded = 0;
+  urls.forEach((u, i) => {
+    const s = document.createElement('script');
+    s.src = u;
+    s.onerror = () => { console.warn('Failed to load:', u); window['_lib_' + i + '_ok'] = false; loaded++; if (loaded === urls.length) cb(); };
+    s.onload = () => { window['_lib_' + i + '_ok'] = true; loaded++; if (loaded === urls.length) cb(); };
+    document.head.appendChild(s);
+  });
+}
+loadScripts([
+  '/evistictactoe/qrcode.min.js',
+  '/evistictactoe/jsQR.js'
+], () => { window._libsReady = true; });
+</script>
+<script>
 // ═══════════════════════════════════════
 //  CONSTANTS & STATE
 // ═══════════════════════════════════════
@@ -1232,68 +1244,52 @@ function miniToSDP(mini) {
   return { type: mini.type, sdp };
 }
 
-// --- Compression helpers (pako deflateRaw + base64url compact) ---
-function compressForQR(obj) {
-  const json = JSON.stringify(obj);
-  const compressed = pako.deflateRaw(new TextEncoder().encode(json));
-  // btoa but URL-safe
-  let binary = '';
-  for (let i = 0; i < compressed.length; i++) {
-    binary += String.fromCharCode(compressed[i]);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+// --- QR data encoding (no compression needed — mini SDP is small enough) ---
+function encodeForQR(obj) {
+ return JSON.stringify(obj);
 }
 
-function decompressFromQR(str) {
-  // Restore base64url → standard base64 → decode
-  let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
-  while (b64.length % 4) b64 += '=';
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const decompressed = pako.inflateRaw(bytes);
-  return JSON.parse(new TextDecoder().decode(decompressed));
+function decodeFromQR(str) {
+ return JSON.parse(str);
 }
 
 // --- QR Generation ---
-async function generateQR(data, container) {
-  container.innerHTML = '';
-  try {
-    const compressed = compressForQR(data);
-    const origLen = JSON.stringify(data).length;
-    console.log(`[QR] 원본 ${origLen}B → 압축 ${compressed.length}자`);
+function generateQR(data, container) {
+ container.innerHTML = '';
+ try {
+  const payload = encodeForQR(data);
+  console.log('[QR] payload length:', payload.length, 'chars');
 
-    if (compressed.length > 2000) {
-      throw new Error(`압축 후에도 ${compressed.length}자로 QR 한도 초과`);
-    }
-
-    const canvas = document.createElement('canvas');
-    // qrcode-generator API: typeNumber=0 (auto), errorCorrectionLevel='L'
- const qr = qrcode(0, 'L');
- qr.addData(compressed);
- qr.make();
-
- const moduleCount = qr.getModuleCount();
- const cellSize = Math.max(6, Math.floor(360 / moduleCount));
- const size = moduleCount * cellSize;
- canvas.width = size;
- canvas.height = size;
- const ctx = canvas.getContext('2d');
- ctx.fillStyle = '#ffffff';
- ctx.fillRect(0, 0, size, size);
- ctx.fillStyle = '#000000';
- for (let row = 0; row < moduleCount; row++) {
- for (let col = 0; col < moduleCount; col++) {
- if (qr.isDark(row, col)) {
- ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
- }
- }
- }
- container.appendChild(canvas);
-  } catch (e) {
-    console.error('[QR] Generation failed:', e);
-    container.innerHTML = '<p style="color:#e74c3c;font-size:0.75rem;padding:1rem;text-align:center;">QR 생성 실패<br>' + e.message + '</p>';
+  if (payload.length > 2500) {
+   throw new Error('QR data too large: ' + payload.length + ' chars');
   }
+
+  const qr = qrcode(0, 'L');
+  qr.addData(payload);
+  qr.make();
+
+  const moduleCount = qr.getModuleCount();
+  const cellSize = Math.max(6, Math.floor(360 / moduleCount));
+  const size = moduleCount * cellSize;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#000000';
+  for (let row = 0; row < moduleCount; row++) {
+   for (let col = 0; col < moduleCount; col++) {
+    if (qr.isDark(row, col)) {
+     ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+    }
+   }
+  }
+  container.appendChild(canvas);
+ } catch (e) {
+  console.error('[QR] Generation failed:', e);
+  container.innerHTML = '<p style="color:#e74c3c;font-size:0.75rem;padding:1rem;text-align:center;">QR 생성 실패<br>' + e.message + '</p>';
+ }
 }
 
 // --- QR Scan (file-based) ---
@@ -1348,25 +1344,25 @@ function createFileScanner(zone, onResult) {
 
     if (code && code.data) {
      try {
-      const data = decompressFromQR(code.data);
-      onResult(data);
-     } catch (err) {
-      alert('QR 데이터 해독 실패: ' + err.message);
-     }
-    } else {
-     alert('QR 인식 실패
-
-스크린샷으로 저장 후 선택하거나,
-밝은 화면에서 가까이 찍어주세요.')    }
-   };
-   img.src = e.target.result;
+ const data = decodeFromQR(code.data);
+ onResult(data);
+ } catch (err) {
+ alert('QR 해독 실패: ' + err.message);
+ }
+ } else {
+ alert('QR 인식 실패. 스크린샷으로 저장 후 선택해주세요.');
+ }
+ };
+ img.src = e.target.result;
   };
   reader.readAsDataURL(file);
  });
 
  zone.appendChild(input);
  zone.appendChild(label);
-}// --- Host Flow ---
+}
+
+// --- Host Flow ---
 async function startAsHost() {
   gameMode = 'multiplayer_host';
   myRole = 'O';
