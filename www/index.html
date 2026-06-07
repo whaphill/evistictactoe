@@ -19,7 +19,7 @@
 <!-- QR Code Generator -->
 <script src="/evistictactoe/qrcode.min.js"></script>
 <!-- QR Code Scanner -->
-<script src="/evistictactoe/html5-qrcode.min.js"></script>
+<script src="/evistictactoe/jsQR.js"></script>
 <!-- pako compression -->
 <script src="/evistictactoe/pako.min.js"></script>
 <style>
@@ -1298,39 +1298,48 @@ async function generateQR(data, container) {
 
 // --- QR Scan (file-based) ---
 function createFileScanner(zone, onResult) {
-  zone.innerHTML = '';
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.className = 'mp-file-input';
-  const label = document.createElement('div');
-  label.style.cssText = 'font-size:0.75rem;color:#666;margin-top:0.4rem;';
-  label.textContent = 'QR 이미지를 선택하세요';
+ zone.innerHTML = '';
+ const input = document.createElement('input');
+ input.type = 'file';
+ input.accept = 'image/*';
+ input.className = 'mp-file-input';
+ const label = document.createElement('div');
+ label.style.cssText = 'font-size:0.75rem;color:#666;margin-top:0.4rem;';
+ label.textContent = 'QR 이미지를 선택하세요';
 
-  input.addEventListener('change', async () => {
-    const file = input.files[0];
-    if (!file) return;
-    try {
-      const scanner = new Html5Qrcode('mp-file-scan-' + Date.now());
-      const hiddenDiv = document.createElement('div');
-      hiddenDiv.id = scanner._elementId;
-      hiddenDiv.style.display = 'none';
-      document.body.appendChild(hiddenDiv);
+ input.addEventListener('change', () => {
+ const file = input.files[0];
+ if (!file) return;
+ const img = new Image();
+ const reader = new FileReader();
+ reader.onload = (e) => {
+ img.onload = () => {
+ const canvas = document.createElement('canvas');
+ canvas.width = img.width;
+ canvas.height = img.height;
+ const ctx = canvas.getContext('2d');
+ ctx.drawImage(img, 0, 0);
+ const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+ const code = jsQR(imageData.data, imageData.width, imageData.height);
+ if (code && code.data) {
+ try {
+ const data = decompressFromQR(code.data);
+ onResult(data);
+ } catch (err) {
+ alert('QR 데이터 해독 실패: ' + err.message);
+ }
+ } else {
+ alert('QR 코드를 찾을 수 없습니다. 선명한 이미지로 다시 시도해주세요.');
+ }
+ };
+ img.src = e.target.result;
+ };
+ reader.readAsDataURL(file);
+ });
 
-      const result = await scanner.scanFile(file, true);
-      scanner.clear();
-      hiddenDiv.remove();
-      const data = decompressFromQR(result);
-      onResult(data);
-    } catch (e) {
-      alert('QR 인식 실패: ' + e.message);
-    }
-  });
-
-  zone.appendChild(input);
-  zone.appendChild(label);
+ zone.appendChild(input);
+ zone.appendChild(label);
 }
-
 // --- Host Flow ---
 async function startAsHost() {
   gameMode = 'multiplayer_host';

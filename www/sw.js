@@ -1,10 +1,10 @@
-const CACHE_NAME = 'evi-tictactoe-v6';
+const CACHE_NAME = 'evi-tictactoe-v7';
 const BASE = '/evistictactoe/';
 const urlsToCache = [
   BASE + 'index.html',
   BASE + 'manifest.json',
   BASE + 'qrcode.min.js',
-  BASE + 'html5-qrcode.min.js',
+  BASE + 'jsQR.js',
   BASE + 'pako.min.js',
   BASE + 'favicon.svg'
 ];
