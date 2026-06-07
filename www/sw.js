@@ -1,4 +1,4 @@
-const CACHE_NAME = 'evi-tictactoe-v7';
+const CACHE_NAME = 'evi-tictactoe-v8';
 const BASE = '/evistictactoe/';
 const urlsToCache = [
   BASE + 'index.html',
