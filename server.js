@@ -8,10 +8,50 @@
  * 기본 포트: 8080 (PORT 환경변수로 변경 가능)
  */
 
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { WebSocketServer } = require('ws');
 
 const PORT = parseInt(process.env.PORT, 10) || 8080;
 const ROOM_CODE_LENGTH = 4;
+
+// ─── Static file serving ───
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+};
+
+const server = http.createServer((req, res) => {
+  let url = req.url.split('?')[0];
+  if (url === '/') url = '/index.html';
+  if (url === '/evistictactoe') url = '/evistictactoe/index.html';
+
+  const filePath = path.join(__dirname, url);
+  const ext = path.extname(filePath);
+
+  // Security: only serve files from the project directory
+  if (!filePath.startsWith(__dirname)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
+    res.end(data);
+  });
+});
 
 // ─── 방/플레이어 상태 ───
 const rooms = new Map();   // roomCode → { host, guest, state }
@@ -36,9 +76,9 @@ function send(ws, data) {
 }
 
 // ─── WebSocket 서버 ───
-const wss = new WebSocketServer({ port: PORT });
-console.log(`[eviTicTacToe Server] listening on port ${PORT}`);
-console.log(`[eviTicTacToe Server] http://localhost:${PORT}`);
+const wss = new WebSocketServer({ server });
+console.log(`[eviTicTacToe Server] listening on http://localhost:${PORT}`);
+console.log(`[eviTicTacToe Server] Open http://localhost:${PORT} in your browser`);
 
 wss.on('connection', (ws) => {
   console.log(`[+] New connection (total: ${wss.clients.size})`);
@@ -155,4 +195,5 @@ wss.on('connection', (ws) => {
   });
 });
 
+server.listen(PORT);
 console.log(`[eviTicTacToe Server] Ready for connections`);

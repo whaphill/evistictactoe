@@ -866,6 +866,7 @@ let myRole = null;        // 'O' (host) | 'X' (guest)
 let isRemoteMove = false;
 let wsConnection = null;
 let mpRoomCode = null;
+const SERVER_URL = `ws://${location.host || '127.0.0.1:8080'}`;
 
 // ═══════════════════════════════════════
 //  DOM REFS
@@ -1159,12 +1160,18 @@ function resetMPLobby() {
 
 // ─── WebSocket Connection ───
 
-function connectWebSocket() {
+function connectWebSocket(onOpenCallback) {
   cleanupWebSocket();
+  console.log('[WS] Connecting to', SERVER_URL);
   wsConnection = new WebSocket(SERVER_URL);
 
-  wsConnection.onclose = () => {
-    console.log('[WS] Disconnected');
+  wsConnection.onopen = () => {
+    console.log('[WS] Connected!');
+    if (onOpenCallback) onOpenCallback();
+  };
+
+  wsConnection.onclose = (ev) => {
+    console.log('[WS] Disconnected (code:', ev.code, ')');
     if (gameMode !== 'local') {
       updateMPStatus('서버 연결이 끊어졌습니다', 'error');
       gameMode = 'local';
@@ -1172,9 +1179,9 @@ function connectWebSocket() {
     }
   };
 
-  wsConnection.onerror = () => {
-    console.error('[WS] Error');
-    updateMPStatus('서버 연결 실패', 'error');
+  wsConnection.onerror = (ev) => {
+    console.error('[WS] Error event:', ev.type);
+    updateMPStatus('서버 연결 실패 - 서버가 실행 중인지 확인하세요', 'error');
   };
 
   wsConnection.onmessage = (ev) => {
@@ -1244,7 +1251,7 @@ function handleServerMessage(msg) {
 
 // ─── Host Flow ───
 
-async function startAsHost() {
+function startAsHost() {
   gameMode = 'host';
   myRole = 'O';
 
@@ -1255,14 +1262,11 @@ async function startAsHost() {
   mpHostStep.textContent = '';
   mpHostStatus.className = 'mp-status';
 
-  connectWebSocket();
-
-  // Wait for connection then send CREATE_ROOM
-  wsConnection.onopen = () => {
+  connectWebSocket(() => {
     console.log('[WS] Connected, creating room...');
     mpHostStatus.textContent = '방을 생성하는 중...';
     wsConnection.send(JSON.stringify({ type: 'CREATE_ROOM' }));
-  };
+  });
 
   // Copy button for room code
   document.getElementById('mp-host-copy-btn').onclick = () => {
@@ -1270,7 +1274,6 @@ async function startAsHost() {
     navigator.clipboard.writeText(code).then(() => {
       alert('방 코드가 복사되었습니다!');
     }).catch(() => {
-      // Fallback
       const ta = document.createElement('textarea');
       ta.value = code;
       document.body.appendChild(ta);
@@ -1284,7 +1287,7 @@ async function startAsHost() {
 
 // ─── Guest Flow ───
 
-async function startAsGuest() {
+function startAsGuest() {
   gameMode = 'guest';
   myRole = 'X';
 
@@ -1307,13 +1310,11 @@ async function startAsGuest() {
     mpGuestStep.textContent = '잠시만 기다려주세요...';
     document.getElementById('mp-guest-code-section').style.display = 'none';
 
-    connectWebSocket();
-
-    wsConnection.onopen = () => {
+    connectWebSocket(() => {
       console.log('[WS] Connected, joining room', code);
       mpGuestStatus.textContent = '방에 입장하는 중...';
       wsConnection.send(JSON.stringify({ type: 'JOIN_ROOM', payload: { code } }));
-    };
+    });
   };
 }
 
