@@ -817,7 +817,7 @@ header .subtitle {
     </div>
     <div class="mp-code-section" id="mp-host-retry-section" style="display:none;">
       <label class="mp-code-label">▼ 서버 주소 직접 입력</label>
-      <input type="text" class="mp-code-input mp-input-sm" id="mp-host-manual-url" value="192.168.0.2:7680" autocomplete="off" />
+      <input type="text" class="mp-code-input mp-input-sm" id="mp-host-manual-url" value="1.237.163.231:7680" autocomplete="off" />
       <button class="mp-apply-btn" id="mp-host-retry-btn">🔄 다시 연결</button>
     </div>
   </div>
@@ -835,7 +835,7 @@ header .subtitle {
     </div>
     <div class="mp-code-section" id="mp-guest-retry-section" style="display:none;">
       <label class="mp-code-label">▼ 서버 주소 직접 입력</label>
-      <input type="text" class="mp-code-input mp-input-sm" id="mp-guest-manual-url" value="192.168.0.2:7680" autocomplete="off" />
+      <input type="text" class="mp-code-input mp-input-sm" id="mp-guest-manual-url" value="1.237.163.231:7680" autocomplete="off" />
       <button class="mp-apply-btn" id="mp-guest-retry-btn">🔄 다시 연결</button>
     </div>
   </div>
@@ -1376,7 +1376,7 @@ function startAsHost() {
   // Retry with custom URL
   document.getElementById('mp-host-retry-btn').onclick = () => {
     const customUrl = document.getElementById('mp-host-manual-url').value.trim();
-    if (!customUrl) { alert('서버 주소를 입력하세요 (예: 192.168.0.2:7680)'); return; }
+    if (!customUrl) { alert('서버 주소를 입력하세요 (예: 1.237.163.231:7680)'); return; }
     const wsUrl = customUrl.startsWith('ws://') ? customUrl : `ws://${customUrl}`;
     document.getElementById('mp-host-retry-section').style.display = 'none';
     mpHostStatus.textContent = '서버에 재연결 중...';
@@ -1423,7 +1423,7 @@ function startAsGuest() {
   // Retry with custom URL
   document.getElementById('mp-guest-retry-btn').onclick = () => {
     const customUrl = document.getElementById('mp-guest-manual-url').value.trim();
-    if (!customUrl) { alert('서버 주소를 입력하세요 (예: 192.168.0.2:7680)'); return; }
+    if (!customUrl) { alert('서버 주소를 입력하세요 (예: 1.237.163.231:7680)'); return; }
     const wsUrl = customUrl.startsWith('ws://') ? customUrl : `ws://${customUrl}`;
     document.getElementById('mp-guest-retry-section').style.display = 'none';
 
