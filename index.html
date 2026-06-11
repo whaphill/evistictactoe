@@ -729,6 +729,37 @@ header .subtitle {
   color: #444;
   letter-spacing: 0.1em;
 }
+.mp-input-sm {
+  font-size: 1.2rem !important;
+  letter-spacing: 0.1em !important;
+  max-width: 280px !important;
+}
+
+/* ─── Server Status ─── */
+.mp-server-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #555;
+}
+.mp-server-dot {
+  font-size: 0.5rem;
+  color: #e74c3c;
+  transition: color 0.3s ease;
+}
+.mp-server-dot.connected {
+  color: #2ecc71;
+}
+.mp-server-url {
+  word-break: break-all;
+}
+.mp-server-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #555;
+}
 </style>
 </head>
 <body>
@@ -767,25 +798,45 @@ header .subtitle {
     </div>
   </div>
 
+  <!-- SERVER INFO (shown in all modes) -->
+  <div class="mp-server-info" id="mp-server-info" style="display:none;">
+    <span class="mp-server-dot" id="mp-server-dot">&#9679;</span>
+    <span class="mp-server-url" id="mp-server-url"></span>
+  </div>
+
   <!-- HOST FLOW (Server-based) -->
   <div class="mp-panel" id="mp-host-panel">
     <div class="mp-status" id="mp-host-status">방 생성 중...</div>
-    <div class="mp-step-text" id="mp-host-step"></div>
+    <div class="mp-step-text" id="mp-host-step">
+      <span class="mp-server-label">서버: </span><span id="mp-host-url-display"></span>
+    </div>
     <div class="mp-code-section" id="mp-host-code-section" style="display:none;">
       <label class="mp-code-label">▼ 상대방에게 공유할 방 코드입니다</label>
       <div class="mp-room-code" id="mp-host-code"></div>
       <button class="mp-copy-btn" id="mp-host-copy-btn">📋 복사</button>
+    </div>
+    <div class="mp-code-section" id="mp-host-retry-section" style="display:none;">
+      <label class="mp-code-label">▼ 서버 주소 직접 입력</label>
+      <input type="text" class="mp-code-input mp-input-sm" id="mp-host-manual-url" value="192.168.0.2:7680" autocomplete="off" />
+      <button class="mp-apply-btn" id="mp-host-retry-btn">🔄 다시 연결</button>
     </div>
   </div>
 
   <!-- GUEST FLOW (Server-based) -->
   <div class="mp-panel" id="mp-guest-panel">
     <div class="mp-status" id="mp-guest-status">호스트의 방 코드를 입력하세요</div>
-    <div class="mp-step-text" id="mp-guest-step"></div>
+    <div class="mp-step-text" id="mp-guest-step">
+      <span class="mp-server-label">서버: </span><span id="mp-guest-url-display"></span>
+    </div>
     <div class="mp-code-section" id="mp-guest-code-section">
       <label class="mp-code-label">▼ 방 코드 입력 (4자리)</label>
       <input type="text" class="mp-code-input" id="mp-guest-code-input" maxlength="4" placeholder="EX: A3K9" autocomplete="off" />
       <button class="mp-apply-btn" id="mp-guest-join-btn">✅ 입장</button>
+    </div>
+    <div class="mp-code-section" id="mp-guest-retry-section" style="display:none;">
+      <label class="mp-code-label">▼ 서버 주소 직접 입력</label>
+      <input type="text" class="mp-code-input mp-input-sm" id="mp-guest-manual-url" value="192.168.0.2:7680" autocomplete="off" />
+      <button class="mp-apply-btn" id="mp-guest-retry-btn">🔄 다시 연결</button>
     </div>
   </div>
 
@@ -866,7 +917,7 @@ let myRole = null;        // 'O' (host) | 'X' (guest)
 let isRemoteMove = false;
 let wsConnection = null;
 let mpRoomCode = null;
-const SERVER_URL = `ws://${location.host || '127.0.0.1:8080'}`;
+const SERVER_URL = `ws://${location.host || '127.0.0.1:7680'}`;
 
 // ═══════════════════════════════════════
 //  DOM REFS
@@ -1146,6 +1197,8 @@ function endGame(winner) {
 //  MULTIPLAYER — WebSocket (Server-based)
 // ═══════════════════════════════════════
 
+let wsConnectTimer = null;
+
 function resetMPLobby() {
   mpModeSelect.style.display = 'flex';
   mpHostPanel.classList.remove('visible');
@@ -1153,35 +1206,65 @@ function resetMPLobby() {
   mpHostStep.textContent = '';
   mpGuestStep.textContent = '';
   document.getElementById('mp-host-code-section').style.display = 'none';
+  document.getElementById('mp-host-retry-section').style.display = 'none';
   document.getElementById('mp-guest-code-section').style.display = 'flex';
+  document.getElementById('mp-guest-retry-section').style.display = 'none';
   document.getElementById('mp-guest-code-input').value = '';
+  document.getElementById('mp-server-info').style.display = 'none';
+  if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
   cleanupWebSocket();
 }
 
 // ─── WebSocket Connection ───
 
-function connectWebSocket(onOpenCallback) {
+function connectWebSocket(onOpenCallback, customUrl) {
   cleanupWebSocket();
-  console.log('[WS] Connecting to', SERVER_URL);
-  wsConnection = new WebSocket(SERVER_URL);
+  if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
+
+  const url = customUrl || SERVER_URL;
+  console.log('[WS] Connecting to', url);
+
+  // Show server URL in lobby
+  const urlDisplay = gameMode === 'host' ? 'mp-host-url-display' : 'mp-guest-url-display';
+  document.getElementById(urlDisplay).textContent = url;
+  document.getElementById('mp-server-info').style.display = 'flex';
+  document.getElementById('mp-server-url').textContent = url;
+  document.getElementById('mp-server-dot').className = 'mp-server-dot';
+
+  wsConnection = new WebSocket(url);
+  let timedOut = false;
+
+  // Connection timeout (5 seconds)
+  wsConnectTimer = setTimeout(() => {
+    timedOut = true;
+    if (wsConnection && wsConnection.readyState <= 1) {
+      try { wsConnection.close(); } catch(e) {}
+    }
+    updateMPStatus('서버 연결 시간 초과 - IP 주소가 맞는지 확인하세요', 'error');
+    showRetrySection();
+  }, 5000);
 
   wsConnection.onopen = () => {
+    if (timedOut) return;
+    if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
     console.log('[WS] Connected!');
+    document.getElementById('mp-server-dot').className = 'mp-server-dot connected';
     if (onOpenCallback) onOpenCallback();
   };
 
   wsConnection.onclose = (ev) => {
     console.log('[WS] Disconnected (code:', ev.code, ')');
-    if (gameMode !== 'local') {
+    if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
+    if (gameMode !== 'local' && !timedOut) {
       updateMPStatus('서버 연결이 끊어졌습니다', 'error');
-      gameMode = 'local';
-      myRole = null;
+      showRetrySection();
     }
   };
 
   wsConnection.onerror = (ev) => {
-    console.error('[WS] Error event:', ev.type);
-    updateMPStatus('서버 연결 실패 - 서버가 실행 중인지 확인하세요', 'error');
+    if (timedOut) return;
+    console.error('[WS] Error');
+    document.getElementById('mp-server-dot').className = 'mp-server-dot';
   };
 
   wsConnection.onmessage = (ev) => {
@@ -1194,7 +1277,13 @@ function connectWebSocket(onOpenCallback) {
   };
 }
 
+function showRetrySection() {
+  const sectionId = gameMode === 'host' ? 'mp-host-retry-section' : 'mp-guest-retry-section';
+  document.getElementById(sectionId).style.display = 'flex';
+}
+
 function cleanupWebSocket() {
+  if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
   if (wsConnection) {
     try { wsConnection.close(); } catch(e) {}
     wsConnection = null;
@@ -1258,12 +1347,12 @@ function startAsHost() {
   mpModeSelect.style.display = 'none';
   mpHostPanel.classList.add('visible');
   document.getElementById('mp-host-code-section').style.display = 'none';
+  document.getElementById('mp-host-retry-section').style.display = 'none';
   mpHostStatus.textContent = '서버에 연결 중...';
-  mpHostStep.textContent = '';
+  mpHostStep.innerHTML = '<span class="mp-server-label">서버: </span><span id="mp-host-url-display"></span>';
   mpHostStatus.className = 'mp-status';
 
   connectWebSocket(() => {
-    console.log('[WS] Connected, creating room...');
     mpHostStatus.textContent = '방을 생성하는 중...';
     wsConnection.send(JSON.stringify({ type: 'CREATE_ROOM' }));
   });
@@ -1283,6 +1372,20 @@ function startAsHost() {
       alert('방 코드가 복사되었습니다!');
     });
   };
+
+  // Retry with custom URL
+  document.getElementById('mp-host-retry-btn').onclick = () => {
+    const customUrl = document.getElementById('mp-host-manual-url').value.trim();
+    if (!customUrl) { alert('서버 주소를 입력하세요 (예: 192.168.0.2:7680)'); return; }
+    const wsUrl = customUrl.startsWith('ws://') ? customUrl : `ws://${customUrl}`;
+    document.getElementById('mp-host-retry-section').style.display = 'none';
+    mpHostStatus.textContent = '서버에 재연결 중...';
+    mpHostStatus.className = 'mp-status';
+    connectWebSocket(() => {
+      mpHostStatus.textContent = '방을 생성하는 중...';
+      wsConnection.send(JSON.stringify({ type: 'CREATE_ROOM' }));
+    }, wsUrl);
+  };
 }
 
 // ─── Guest Flow ───
@@ -1294,8 +1397,9 @@ function startAsGuest() {
   mpModeSelect.style.display = 'none';
   mpGuestPanel.classList.add('visible');
   document.getElementById('mp-guest-code-section').style.display = 'flex';
+  document.getElementById('mp-guest-retry-section').style.display = 'none';
   mpGuestStatus.textContent = '방 코드를 입력하세요';
-  mpGuestStep.textContent = '';
+  mpGuestStep.innerHTML = '<span class="mp-server-label">서버: </span><span id="mp-guest-url-display"></span>';
   mpGuestStatus.className = 'mp-status';
 
   // Join button
@@ -1311,10 +1415,31 @@ function startAsGuest() {
     document.getElementById('mp-guest-code-section').style.display = 'none';
 
     connectWebSocket(() => {
-      console.log('[WS] Connected, joining room', code);
       mpGuestStatus.textContent = '방에 입장하는 중...';
       wsConnection.send(JSON.stringify({ type: 'JOIN_ROOM', payload: { code } }));
     });
+  };
+
+  // Retry with custom URL
+  document.getElementById('mp-guest-retry-btn').onclick = () => {
+    const customUrl = document.getElementById('mp-guest-manual-url').value.trim();
+    if (!customUrl) { alert('서버 주소를 입력하세요 (예: 192.168.0.2:7680)'); return; }
+    const wsUrl = customUrl.startsWith('ws://') ? customUrl : `ws://${customUrl}`;
+    document.getElementById('mp-guest-retry-section').style.display = 'none';
+
+    const code = document.getElementById('mp-guest-code-input').value.trim().toUpperCase();
+    if (code && code.length === 4) {
+      mpGuestStatus.textContent = '서버에 재연결 중...';
+      mpGuestStatus.className = 'mp-status';
+      connectWebSocket(() => {
+        mpGuestStatus.textContent = '방에 입장하는 중...';
+        wsConnection.send(JSON.stringify({ type: 'JOIN_ROOM', payload: { code } }));
+      }, wsUrl);
+    } else {
+      document.getElementById('mp-guest-code-section').style.display = 'flex';
+      mpGuestStatus.textContent = '방 코드를 입력하고 다시 시도하세요';
+      connectWebSocket(null, wsUrl);
+    }
   };
 }
 

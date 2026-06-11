@@ -5,7 +5,7 @@
  * 방 생성/참여를 관리하고 플레이어 간 메시지를 중계합니다.
  *
  * 사용법: node server.js
- * 기본 포트: 8080 (PORT 환경변수로 변경 가능)
+ * 기본 포트: 7680 (PORT 환경변수로 변경 가능)
  */
 
 const http = require('http');
@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
-const PORT = parseInt(process.env.PORT, 10) || 8080;
+const PORT = parseInt(process.env.PORT, 10) || 7680;
 const ROOM_CODE_LENGTH = 4;
 
 // ─── Static file serving ───
@@ -75,10 +75,14 @@ function send(ws, data) {
   }
 }
 
-// ─── WebSocket 서버 ───
+// ─── WebSocket 서버 (path를 명시적으로 지정) ───
 const wss = new WebSocketServer({ server });
 console.log(`[eviTicTacToe Server] listening on http://localhost:${PORT}`);
 console.log(`[eviTicTacToe Server] Open http://localhost:${PORT} in your browser`);
+
+server.on('upgrade', (req, socket, head) => {
+  console.log(`[WS] Upgrade request from ${req.socket.remoteAddress} (origin: ${req.headers.origin || 'none'})`);
+});
 
 wss.on('connection', (ws) => {
   console.log(`[+] New connection (total: ${wss.clients.size})`);
