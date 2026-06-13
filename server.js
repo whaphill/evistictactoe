@@ -5,7 +5,7 @@
  * 방 생성/참여를 관리하고 플레이어 간 메시지를 중계합니다.
  *
  * 사용법: node server.js
- * 기본 포트: 7680 (PORT 환경변수로 변경 가능)
+ * 기본 포트: 7650 (PORT 환경변수로 변경 가능)
  */
 
 const http = require('http');
@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
-const PORT = parseInt(process.env.PORT, 10) || 7680;
+const PORT = parseInt(process.env.PORT, 10) || 7650;
 const ROOM_CODE_LENGTH = 4;
 
 // ─── Static file serving ───
