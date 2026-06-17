@@ -1,770 +1,716 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0f">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="eviTicTacToe">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="application-name" content="evi's TicTacToe">
-<meta name="description" content="3목 틱택토 - 10점 먼저 이기는 사람이 승리">
-<link rel="manifest" href="/evistictactoe/manifest.json">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0a0f' width='180' height='180' rx='40'/><text x='50%25' y='45%25' font-size='90' text-anchor='middle' dominant-baseline='central' fill='%23ff6b9d'>O</text><text x='70%25' y='70%25' font-size='60' text-anchor='middle' dominant-baseline='central' fill='%234ecdc4'>X</text></svg>">
-<title>evi's TicTacToe</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-<style>
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="eviTicTacToe">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="evi's TicTacToe">
+  <meta name="description" content="3목 틱택토 - 10점 먼저 이기는 사람이 승리">
+  <link rel="manifest" href="/evistictactoe/manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%230a0a0f' width='180' height='180' rx='40'/><text x='50%25' y='45%25' font-size='90' text-anchor='middle' dominant-baseline='central' fill='%23ff6b9d'>O</text><text x='70%25' y='70%25' font-size='60' text-anchor='middle' dominant-baseline='central' fill='%234ecdc4'>X</text></svg>">
+  <title>evi's TicTacToe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 
-body {
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: #0a0a0f;
-  background-image:
-    radial-gradient(ellipse at 20% 80%, rgba(78, 205, 196, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(255, 107, 157, 0.03) 0%, transparent 50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Noto Sans KR', sans-serif;
-  color: #e0e0e0;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-  gap: 1.2rem;
-  overflow-x: hidden;
-}
+  <style>
+  /* ═══════════════════════════════════════
+     BASE / RESET
+     ═══════════════════════════════════════ */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-/* ─── MAIN SCREEN ─── */
-#main-screen {
-  position: fixed;
-  inset: 0;
-  background: #0a0a0f;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3rem;
-  z-index: 200;
-  transition: opacity 0.4s ease, transform 0.4s ease;
-}
-#main-screen.hidden {
-  opacity: 0;
-  transform: scale(1.1);
-  pointer-events: none;
-}
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #0a0a0f;
+    background-image:
+      radial-gradient(ellipse at 20% 80%, rgba(78, 205, 196, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(255, 107, 157, 0.03) 0%, transparent 50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #e0e0e0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    gap: 1.2rem;
+    overflow-x: hidden;
+  }
 
-.main-title {
-  text-align: center;
-  animation: titleFloat 3s ease-in-out infinite;
-}
-.main-title .title-oxy {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: clamp(3rem, 15vw, 6rem);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-}
-.main-title .title-ox { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.5); }
-.main-title .title-xs { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.5); }
-.main-title .title-tac {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.5rem, 6vw, 2.5rem);
-  background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 0.3em;
-  margin-top: 0.5rem;
-}
-.main-title .title-sub {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: #555;
-  margin-top: 0.8rem;
-  letter-spacing: 0.1em;
-}
+  /* ═══════════════════════════════════════
+     MAIN SCREEN
+     ═══════════════════════════════════════ */
+  #main-screen {
+    position: fixed;
+    inset: 0;
+    background: #0a0a0f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3rem;
+    z-index: 200;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  #main-screen.hidden {
+    opacity: 0;
+    transform: scale(1.1);
+    pointer-events: none;
+  }
 
-@keyframes titleFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
+  .main-title {
+    text-align: center;
+    animation: titleFloat 3s ease-in-out infinite;
+  }
+  .main-title .title-oxy {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(3rem, 15vw, 6rem);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .main-title .title-ox { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.5); }
+  .main-title .title-xs { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.5); }
+  .main-title .title-tac {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.5rem, 6vw, 2.5rem);
+    background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.3em;
+    margin-top: 0.5rem;
+  }
+  .main-title .title-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: #555;
+    margin-top: 0.8rem;
+    letter-spacing: 0.1em;
+  }
 
-.main-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  width: min(80vw, 280px);
-}
-.main-btn {
-  font-family: 'Noto Sans KR', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 700;
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  border: 2px solid;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  letter-spacing: 0.1em;
-  position: relative;
-  overflow: hidden;
-}
-.main-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-.main-btn:active {
-  transform: scale(0.97);
-}
+  @keyframes titleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
 
-.main-btn.play {
-  border-color: #ffd700;
-  color: #ffd700;
-}
-.main-btn.play::before {
-  background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
-}
-.main-btn.play:hover::before, .main-btn.play:active::before { opacity: 1; }
-.main-btn.play:hover { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+  .main-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: min(80vw, 280px);
+  }
+  .main-btn {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    border: 2px solid;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.1em;
+    position: relative;
+    overflow: hidden;
+  }
+  .main-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .main-btn:active {
+    transform: scale(0.97);
+  }
 
-.main-btn.invite {
-  border-color: #9b59b6;
-  color: #9b59b6;
-}
-.main-btn.invite::before {
-  background: linear-gradient(135deg, rgba(155,89,182,0.15), rgba(155,89,182,0.05));
-}
-.main-btn.invite:hover::before, .main-btn.invite:active::before { opacity: 1; }
-.main-btn.invite:hover { box-shadow: 0 0 20px rgba(155,89,182,0.3); }
+  .main-btn.multiplayer {
+    border-color: #2ecc71;
+    color: #2ecc71;
+  }
+  .main-btn.multiplayer::before {
+    background: linear-gradient(135deg, rgba(46,204,113,0.15), rgba(46,204,113,0.05));
+  }
+  .main-btn.multiplayer:hover::before, .main-btn.multiplayer:active::before { opacity: 1; }
+  .main-btn.multiplayer:hover { box-shadow: 0 0 20px rgba(46,204,113,0.3); }
 
-.main-btn.shop {
-  border-color: #3498db;
-  color: #3498db;
-}
-.main-btn.shop::before {
-  background: linear-gradient(135deg, rgba(52,152,219,0.15), rgba(52,152,219,0.05));
-}
-.main-btn.shop:hover::before, .main-btn.shop:active::before { opacity: 1; }
-.main-btn.shop:hover { box-shadow: 0 0 20px rgba(52,152,219,0.3); }
+  .main-btn.play {
+    border-color: #ffd700;
+    color: #ffd700;
+  }
+  .main-btn.play::before {
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
+  }
+  .main-btn.play:hover::before, .main-btn.play:active::before { opacity: 1; }
+  .main-btn.play:hover { box-shadow: 0 0 20px rgba(255,215,0,0.3); }
 
-.main-btn.multiplayer {
-  border-color: #2ecc71;
-  color: #2ecc71;
-}
-.main-btn.multiplayer::before {
-  background: linear-gradient(135deg, rgba(46,204,113,0.15), rgba(46,204,113,0.05));
-}
-.main-btn.multiplayer:hover::before, .main-btn.multiplayer:active::before { opacity: 1; }
-.main-btn.multiplayer:hover { box-shadow: 0 0 20px rgba(46,204,113,0.3); }
+  .main-btn.invite {
+    border-color: #9b59b6;
+    color: #9b59b6;
+  }
+  .main-btn.invite::before {
+    background: linear-gradient(135deg, rgba(155,89,182,0.15), rgba(155,89,182,0.05));
+  }
+  .main-btn.invite:hover::before, .main-btn.invite:active::before { opacity: 1; }
+  .main-btn.invite:hover { box-shadow: 0 0 20px rgba(155,89,182,0.3); }
 
-#restart-row {
-  display: flex;
-  gap: 0.8rem;
-  width: min(92vw, 480px);
-  justify-content: flex-end;
-}
-.small-btn {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-  padding: 0.45rem 1rem;
-  background: transparent;
-  color: #555;
-  border: 1px solid #2a2a3a;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-.small-btn:hover {
-  color: #e0e0e0;
-  border-color: #5a5a7a;
-}
-.small-btn:active { transform: scale(0.97); }
+  .main-btn.shop {
+    border-color: #3498db;
+    color: #3498db;
+  }
+  .main-btn.shop::before {
+    background: linear-gradient(135deg, rgba(52,152,219,0.15), rgba(52,152,219,0.05));
+  }
+  .main-btn.shop:hover::before, .main-btn.shop:active::before { opacity: 1; }
+  .main-btn.shop:hover { box-shadow: 0 0 20px rgba(52,152,219,0.3); }
 
-/* ─── GAME SCREEN ─── */
-#game-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.2rem;
-  width: 100%;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-#game-screen.visible {
-  opacity: 1;
-}
+  #restart-row {
+    display: flex;
+    gap: 0.8rem;
+    width: min(92vw, 480px);
+    justify-content: flex-end;
+  }
+  .small-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    padding: 0.45rem 1rem;
+    background: transparent;
+    color: #555;
+    border: 1px solid #2a2a3a;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .small-btn:hover {
+    color: #e0e0e0;
+    border-color: #5a5a7a;
+  }
+  .small-btn:active { transform: scale(0.97); }
 
-header {
-  text-align: center;
-}
-header h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.5rem, 5vw, 2.2rem);
-  letter-spacing: 0.1em;
-  background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-header .subtitle {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem;
-  color: #555;
-  margin-top: 0.25rem;
-  letter-spacing: 0.05em;
-}
+  /* ═══════════════════════════════════════
+     GAME SCREEN
+     ═══════════════════════════════════════ */
+  #game-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    width: 100%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #game-screen.visible {
+    opacity: 1;
+  }
 
-#scoreboard {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  background: #1a1a2e;
-  border: 1px solid #2a2a3a;
-  border-radius: 12px;
-  padding: 0.8rem 1.5rem;
-}
-.score-block {
-  text-align: center;
-  min-width: 4rem;
-}
-.score-block .mark {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-.score-block .mark.o { color: #ff6b9d; }
-.score-block .mark.x { color: #4ecdc4; }
-.score-block .pts {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #ffd700;
-  text-shadow: 0 0 10px rgba(255,215,0,0.4);
-  transition: transform 0.15s ease;
-}
-.score-block .pts.bump {
-  transform: scale(1.4);
-}
-.score-vs {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  color: #444;
-}
+  header {
+    text-align: center;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+    letter-spacing: 0.1em;
+    background: linear-gradient(135deg, #ff6b9d, #4ecdc4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: #555;
+    margin-top: 0.25rem;
+    letter-spacing: 0.05em;
+  }
 
-#turn-indicator {
-  font-size: 0.85rem;
-  color: #666;
-  text-align: center;
-  height: 1.2em;
-}
-#turn-indicator .turn-o { color: #ff6b9d; }
-#turn-indicator .turn-x { color: #4ecdc4; }
+  #scoreboard {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: #1a1a2e;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 0.8rem 1.5rem;
+  }
+  .score-block {
+    text-align: center;
+    min-width: 4rem;
+  }
+  .score-block .mark {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+  .score-block .mark.o { color: #ff6b9d; }
+  .score-block .mark.x { color: #4ecdc4; }
+  .score-block .pts {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255,215,0,0.4);
+    transition: transform 0.15s ease;
+  }
+  .score-block .pts.bump {
+    transform: scale(1.4);
+  }
+  .score-vs {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: #444;
+  }
 
-#board-wrapper {
-  position: relative;
-  width: min(92vw, 480px);
-  height: min(92vw, 480px);
-}
+  #turn-indicator {
+    font-size: 0.85rem;
+    color: #666;
+    text-align: center;
+    height: 1.2em;
+  }
+  #turn-indicator .turn-o { color: #ff6b9d; }
+  #turn-indicator .turn-x { color: #4ecdc4; }
 
-#board {
-  display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  grid-template-rows: repeat(9, 1fr);
-  gap: 2px;
-  background: #1c1c28;
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid #2a2a3a;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
-  width: 100%;
-  height: 100%;
-}
-.cell {
-  background: #12121a;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 100%;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.12s ease;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  aspect-ratio: 1 / 1;
-}
-.cell[data-col="2"] { border-right: 2px solid #3a3a4a; }
-.cell[data-col="5"] { border-right: 2px solid #3a3a4a; }
-.cell[data-row="2"] { border-bottom: 2px solid #3a3a4a; }
-.cell[data-row="5"] { border-bottom: 2px solid #3a3a4a; }
-.cell:first-child { border-top-left-radius: 6px; }
-.cell:nth-child(9) { border-top-right-radius: 6px; }
-.cell:nth-child(73) { border-bottom-left-radius: 6px; }
-.cell:last-child { border-bottom-right-radius: 6px; }
+  #board-wrapper {
+    position: relative;
+    width: min(92vw, 480px);
+    height: min(92vw, 480px);
+  }
 
-.cell.O { color: #ff6b9d; text-shadow: 0 0 8px rgba(255,107,157,0.5); }
-.cell.X { color: #4ecdc4; text-shadow: 0 0 8px rgba(78,205,196,0.5); }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    gap: 2px;
+    background: #1c1c28;
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid #2a2a3a;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+    width: 100%;
+    height: 100%;
+  }
 
-.cell:not(.occupied):hover { background: #1e1e2e; }
-.cell.occupied { cursor: not-allowed; }
+  .cell {
+    background: #12121a;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 100%;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    aspect-ratio: 1 / 1;
+  }
+  .cell[data-col="2"] { border-right: 2px solid #3a3a4a; }
+  .cell[data-col="5"] { border-right: 2px solid #3a3a4a; }
+  .cell[data-row="2"] { border-bottom: 2px solid #3a3a4a; }
+  .cell[data-row="5"] { border-bottom: 2px solid #3a3a4a; }
+  .cell:first-child { border-top-left-radius: 6px; }
+  .cell:nth-child(9) { border-top-right-radius: 6px; }
+  .cell:nth-child(73) { border-bottom-left-radius: 6px; }
+  .cell:last-child { border-bottom-right-radius: 6px; }
 
-.cell.triple-hit {
-  animation: tripleGlow 0.6s ease-out;
-}
-@keyframes tripleGlow {
-  0% { box-shadow: 0 0 0 0px rgba(255,215,0,0.8); }
-  40% { box-shadow: 0 0 18px 4px rgba(255,215,0,0.8); }
-  100% { box-shadow: 0 0 4px 0px rgba(255,215,0,0.3); }
-}
+  .cell.O { color: #ff6b9d; text-shadow: 0 0 8px rgba(255,107,157,0.5); }
+  .cell.X { color: #4ecdc4; text-shadow: 0 0 8px rgba(78,205,196,0.5); }
 
-.cell.pop {
-  animation: popIn 0.2s ease-out;
-}
-@keyframes popIn {
-  0% { transform: scale(0); opacity: 0; }
-  70% { transform: scale(1.1); }
-  100% { transform: scale(1); opacity: 1; }
-}
-.cell.shake {
-  animation: shakeAnim 0.2s ease;
-}
-@keyframes shakeAnim {
-  0%,100% { transform: translateX(0); }
-  25% { transform: translateX(-3px); }
-  75% { transform: translateX(3px); }
-}
+  .cell:not(.occupied):hover { background: #1e1e2e; }
+  .cell.occupied { cursor: not-allowed; }
 
-#triple-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  overflow: visible;
-}
-.triple-line {
-  stroke-width: 1;
-  stroke-linecap: round;
-  fill: none;
-  opacity: 0.85;
-}
-.triple-line.O {
-  stroke: #ff6b9d;
-}
-.triple-line.X {
-  stroke: #4ecdc4;
-}
-@keyframes lineAppear {
-  0% { stroke-dashoffset: 500; }
-  100% { stroke-dashoffset: 0; }
-}
-.triple-line.animate {
-  stroke-dasharray: 500;
-  animation: lineAppear 0.4s ease-out forwards;
-}
+  #triple-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .triple-line {
+    stroke-width: 1;
+    stroke-linecap: round;
+    fill: none;
+    opacity: 0.85;
+  }
+  .triple-line.O { stroke: #ff6b9d; }
+  .triple-line.X { stroke: #4ecdc4; }
 
-#message {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: clamp(1rem, 4vw, 1.4rem);
-  font-weight: 700;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-#message.win-o { color: #ff6b9d; text-shadow: 0 0 16px rgba(255,107,157,0.7); }
-#message.win-x { color: #4ecdc4; text-shadow: 0 0 16px rgba(78,205,196,0.7); }
-#message.draw { color: #888; }
+  #message {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(1rem, 4vw, 1.4rem);
+    font-weight: 700;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  #message.win-o { color: #ff6b9d; text-shadow: 0 0 16px rgba(255,107,157,0.7); }
+  #message.win-x { color: #4ecdc4; text-shadow: 0 0 16px rgba(78,205,196,0.7); }
+  #message.draw { color: #888; }
 
-#restart-btn {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  padding: 0.55rem 1.6rem;
-  background: transparent;
-  color: #666;
-  border: 1px solid #2a2a3a;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-#restart-btn:hover {
-  color: #e0e0e0;
-  border-color: #5a5a7a;
-}
-#restart-btn:active { transform: scale(0.97); }
+  #restart-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    padding: 0.55rem 1.6rem;
+    background: transparent;
+    color: #666;
+    border: 1px solid #2a2a3a;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  #restart-btn:hover {
+    color: #e0e0e0;
+    border-color: #5a5a7a;
+  }
+  #restart-btn:active { transform: scale(0.97); }
 
-#win-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s ease;
-  backdrop-filter: blur(4px);
-  z-index: 100;
-}
-#win-overlay.show {
-  opacity: 1;
-  pointer-events: all;
-}
-#win-overlay .win-text {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(2rem, 8vw, 3.5rem);
-  animation: bounceIn 0.5s ease-out;
-}
-#win-overlay .win-text.o { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.8); }
-#win-overlay .win-text.x { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.8); }
-@keyframes bounceIn {
-  0% { transform: scale(0.5); opacity: 0; }
-  60% { transform: scale(1.1); }
-  100% { transform: scale(1); opacity: 1; }
-}
-#win-overlay button {
-  font-family: 'JetBrains Mono', monospace;
-  padding: 0.7rem 2rem;
-  background: #1a1a2e;
-  color: #ffd700;
-  border: 1px solid #ffd700;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.18s;
-  letter-spacing: 0.05em;
-}
-#win-overlay button:hover {
-  background: #ffd700;
-  color: #0a0a0f;
-  box-shadow: 0 0 20px rgba(255,215,0,0.4);
-}
-.overlay-btns {
-  display: flex;
-  gap: 1rem;
-}
-#overlay-main-btn {
-  color: #888 !important;
-  border-color: #555 !important;
-}
-#overlay-main-btn:hover {
-  background: #2a2a3e !important;
-  color: #e0e0e0 !important;
-  box-shadow: none !important;
-}
+  /* ═══════════════════════════════════════
+     ANIMATIONS
+     ═══════════════════════════════════════ */
+  .cell.triple-hit {
+    animation: tripleGlow 0.6s ease-out;
+  }
+  @keyframes tripleGlow {
+    0% { box-shadow: 0 0 0 0px rgba(255,215,0,0.8); }
+    40% { box-shadow: 0 0 18px 4px rgba(255,215,0,0.8); }
+    100% { box-shadow: 0 0 4px 0px rgba(255,215,0,0.3); }
+  }
 
-/* ─── MULTIPLAYER LOBBY ─── */
-#mp-lobby {
-  position: fixed;
-  inset: 0;
-  background: #0a0a0f;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2rem;
-  z-index: 300;
-}
-#mp-lobby.visible {
-  display: flex;
-}
+  .cell.pop {
+    animation: popIn 0.2s ease-out;
+  }
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
 
-.mp-title {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.8rem, 6vw, 2.5rem);
-  background: linear-gradient(135deg, #2ecc71, #4ecdc4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 0.1em;
-}
+  .cell.shake {
+    animation: shakeAnim 0.2s ease;
+  }
+  @keyframes shakeAnim {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+  }
 
-.mp-options {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.mp-card {
-  width: min(45vw, 200px);
-  padding: 2rem 1.5rem;
-  background: #12121a;
-  border: 1px solid #2a2a3a;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-}
-.mp-card:hover {
-  border-color: #2ecc71;
-  box-shadow: 0 0 24px rgba(46,204,113,0.15);
-  transform: translateY(-4px);
-}
-.mp-card .mp-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.8rem;
-}
-.mp-card .mp-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 1rem;
-  color: #e0e0e0;
-  letter-spacing: 0.05em;
-}
-.mp-card .mp-desc {
-  font-size: 0.75rem;
-  color: #666;
-  margin-top: 0.4rem;
-}
+  @keyframes lineAppear {
+    0% { stroke-dashoffset: 500; }
+    100% { stroke-dashoffset: 0; }
+  }
+  .triple-line.animate {
+    stroke-dasharray: 500;
+    animation: lineAppear 0.4s ease-out forwards;
+  }
 
-.mp-panel {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-}
-.mp-panel.visible {
-  display: flex;
-}
+  /* ═══════════════════════════════════════
+     WIN OVERLAY
+     ═══════════════════════════════════════ */
+  #win-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    backdrop-filter: blur(4px);
+    z-index: 100;
+  }
+  #win-overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #win-overlay .win-text {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    animation: bounceIn 0.5s ease-out;
+  }
+  #win-overlay .win-text.o { color: #ff6b9d; text-shadow: 0 0 30px rgba(255,107,157,0.8); }
+  #win-overlay .win-text.x { color: #4ecdc4; text-shadow: 0 0 30px rgba(78,205,196,0.8); }
 
-.mp-qr-box {
-  width: 240px;
-  height: 240px;
-  background: #fff;
-  border-radius: 12px;
-  padding: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.mp-qr-box canvas {
-  max-width: 100%;
-  max-height: 100%;
-  image-rendering: pixelated;
-}
+  @keyframes bounceIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
 
-#mp-scan-area {
-  width: min(80vw, 300px);
-  aspect-ratio: 1;
-  background: #12121a;
-  border: 2px dashed #3a3a4a;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-}
-#mp-scan-area video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-.mp-scan-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 0.8rem;
-  color: #3a3a4a;
-  font-size: 2rem;
-}
-.mp-scan-placeholder span {
-  font-size: 0.8rem;
-  color: #666;
-}
+  #win-overlay button {
+    font-family: 'JetBrains Mono', monospace;
+    padding: 0.7rem 2rem;
+    background: #1a1a2e;
+    color: #ffd700;
+    border: 1px solid #ffd700;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.05em;
+  }
+  #win-overlay button:hover {
+    background: #ffd700;
+    color: #0a0a0f;
+    box-shadow: 0 0 20px rgba(255,215,0,0.4);
+  }
+  .overlay-btns {
+    display: flex;
+    gap: 1rem;
+  }
+  #overlay-main-btn {
+    color: #888 !important;
+    border-color: #555 !important;
+  }
+  #overlay-main-btn:hover {
+    background: #2a2a3e !important;
+    color: #e0e0e0 !important;
+    box-shadow: none !important;
+  }
+  /* ═══════════════════════════════════════
+     MULTIPLAYER LOBBY
+     ═══════════════════════════════════════ */
+  #mp-lobby {
+    position: fixed;
+    inset: 0;
+    background: #0a0a0f;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    z-index: 300;
+  }
+  #mp-lobby.visible {
+    display: flex;
+  }
 
-.mp-status {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-  color: #888;
-  text-align: center;
-  min-height: 1.4em;
-}
-.mp-status.connected { color: #2ecc71; }
-.mp-status.error { color: #e74c3c; }
+  .mp-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.8rem, 6vw, 2.5rem);
+    background: linear-gradient(135deg, #2ecc71, #4ecdc4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.1em;
+  }
 
-.mp-btn-group {
-  display: flex;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.mp-back-btn {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
-  padding: 0.5rem 1.2rem;
-  background: transparent;
-  color: #555;
-  border: 1px solid #2a2a3a;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-.mp-back-btn:hover {
-  color: #e0e0e0;
-  border-color: #5a5a7a;
-}
+  .mp-options {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .mp-card {
+    width: min(45vw, 200px);
+    padding: 2rem 1.5rem;
+    background: #12121a;
+    border: 1px solid #2a2a3a;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+  }
+  .mp-card:hover {
+    border-color: #2ecc71;
+    box-shadow: 0 0 24px rgba(46,204,113,0.15);
+    transform: translateY(-4px);
+  }
+  .mp-card .mp-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+  }
+  .mp-card .mp-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: #e0e0e0;
+    letter-spacing: 0.05em;
+  }
+  .mp-card .mp-desc {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 0.4rem;
+  }
 
-.mp-step-text {
-  font-family: 'Noto Sans KR', sans-serif;
-  font-size: 0.8rem;
-  color: #888;
-  text-align: center;
-  line-height: 1.6;
-}
+  .mp-panel {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .mp-panel.visible {
+    display: flex;
+  }
 
-.mp-code-section {
-  width: 100%;
-  max-width: 340px;
-  margin: 0.6rem auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.mp-code-label {
-  font-family: 'Noto Sans KR', sans-serif;
-  font-size: 0.75rem;
-  color: #888;
-  text-align: center;
-}
-.mp-code-textarea {
-  width: 100%;
-  background: #12121a;
-  color: #b0b0c0;
-  border: 1px solid #2a2a3a;
-  border-radius: 6px;
-  padding: 0.6rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  line-height: 1.4;
-  resize: vertical;
-  word-break: break-all;
-}
-.mp-code-textarea:focus {
-  outline: none;
-  border-color: #ff6b9d;
-}
-.mp-copy-btn, .mp-apply-btn {
-  font-family: 'Noto Sans KR', sans-serif;
-  font-size: 0.75rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  cursor: pointer;
-  border: none;
-  transition: all 0.15s ease;
-  letter-spacing: 0.04em;
-}
-.mp-copy-btn {
-  background: #2a2a3a;
-  color: #e0e0e0;
-}
-.mp-copy-btn:hover {
-  background: #3a3a4a;
-}
-.mp-apply-btn {
-  background: #ff6b9d;
-  color: #fff;
-}
-.mp-apply-btn:hover {
-  background: #ff8ab0;
-}
+  .mp-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #888;
+    text-align: center;
+    min-height: 1.4em;
+  }
+  .mp-status.connected { color: #2ecc71; }
+  .mp-status.error { color: #e74c3c; }
 
-/* ─── Server-based Multiplayer ─── */
-.mp-room-code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 3rem;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  color: #ffd700;
-  text-shadow: 0 0 20px rgba(255,215,0,0.4);
-  text-align: center;
-  padding: 0.8rem 0;
-  background: #12121a;
-  border-radius: 12px;
-  border: 1px solid #2a2a3a;
-  min-width: 200px;
-}
-.mp-code-input {
-  width: 100%;
-  max-width: 200px;
-  background: #12121a;
-  color: #ffd700;
-  border: 2px solid #2a2a3a;
-  border-radius: 8px;
-  padding: 0.8rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  text-align: center;
-  text-transform: uppercase;
-  outline: none;
-  transition: border-color 0.2s ease;
-}
-.mp-code-input:focus {
-  border-color: #ffd700;
-  box-shadow: 0 0 12px rgba(255,215,0,0.2);
-}
-.mp-code-input::placeholder {
-  font-size: 0.9rem;
-  color: #444;
-  letter-spacing: 0.1em;
-}
-.mp-input-sm {
-  font-size: 1.2rem !important;
-  letter-spacing: 0.1em !important;
-  max-width: 280px !important;
-}
+  .mp-btn-group {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .mp-back-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    padding: 0.5rem 1.2rem;
+    background: transparent;
+    color: #555;
+    border: 1px solid #2a2a3a;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .mp-back-btn:hover {
+    color: #e0e0e0;
+    border-color: #5a5a7a;
+  }
 
-/* ─── Server Status ─── */
-.mp-server-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: #555;
-}
-.mp-server-dot {
-  font-size: 0.5rem;
-  color: #e74c3c;
-  transition: color 0.3s ease;
-}
-.mp-server-dot.connected {
-  color: #2ecc71;
-}
-.mp-server-url {
-  word-break: break-all;
-}
-.mp-server-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: #555;
-}
-</style>
+  .mp-step-text {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.8rem;
+    color: #888;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .mp-code-section {
+    width: 100%;
+    max-width: 340px;
+    margin: 0.6rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .mp-code-label {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.75rem;
+    color: #888;
+    text-align: center;
+  }
+
+  .mp-room-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255,215,0,0.4);
+    text-align: center;
+    padding: 0.8rem 0;
+    background: #12121a;
+    border-radius: 12px;
+    border: 1px solid #2a2a3a;
+    min-width: 200px;
+  }
+  .mp-code-input {
+    width: 100%;
+    max-width: 200px;
+    background: #12121a;
+    color: #ffd700;
+    border: 2px solid #2a2a3a;
+    border-radius: 8px;
+    padding: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-align: center;
+    text-transform: uppercase;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+  .mp-code-input:focus {
+    border-color: #ffd700;
+    box-shadow: 0 0 12px rgba(255,215,0,0.2);
+  }
+  .mp-code-input::placeholder {
+    font-size: 0.9rem;
+    color: #444;
+    letter-spacing: 0.1em;
+  }
+
+  .mp-copy-btn, .mp-join-btn {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+    letter-spacing: 0.04em;
+  }
+  .mp-copy-btn {
+    background: #2a2a3a;
+    color: #e0e0e0;
+  }
+  .mp-copy-btn:hover {
+    background: #3a3a4a;
+  }
+  .mp-join-btn {
+    background: #ffd700;
+    color: #0a0a0f;
+    font-weight: 700;
+  }
+  .mp-join-btn:hover {
+    background: #ffe44d;
+  }
+
+  .mp-server-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: #555;
+  }
+  .mp-server-dot {
+    font-size: 0.5rem;
+    color: #e74c3c;
+    transition: color 0.3s ease;
+  }
+  .mp-server-dot.connected {
+    color: #2ecc71;
+  }
+
+  .mp-input-sm {
+    font-size: 1rem !important;
+    letter-spacing: 0.1em !important;
+    max-width: 280px !important;
+  }
+  </style>
 </head>
 <body>
 
-<!-- MAIN SCREEN -->
+<!-- ═══════════════════════════════════════
+     MAIN SCREEN
+     ═══════════════════════════════════════ -->
 <div id="main-screen">
   <div class="main-title">
     <div class="title-oxy">
@@ -781,7 +727,9 @@ header .subtitle {
   </div>
 </div>
 
-<!-- MULTIPLAYER LOBBY -->
+<!-- ═══════════════════════════════════════
+     MULTIPLAYER LOBBY
+     ═══════════════════════════════════════ -->
 <div id="mp-lobby">
   <div class="mp-title">Multiplayer</div>
 
@@ -794,58 +742,45 @@ header .subtitle {
     <div class="mp-card" id="mp-join">
       <div class="mp-icon">&#x1F517;</div>
       <div class="mp-label">Join Room</div>
-      <div class="mp-desc">텍스트 코드로 참여합니다</div>
+      <div class="mp-desc">방 코드로 참여합니다</div>
     </div>
   </div>
 
-  <!-- SERVER INFO (shown in all modes) -->
   <div class="mp-server-info" id="mp-server-info" style="display:none;">
     <span class="mp-server-dot" id="mp-server-dot">&#9679;</span>
     <span class="mp-server-url" id="mp-server-url"></span>
   </div>
 
-  <!-- HOST FLOW (Server-based) -->
+  <!-- HOST FLOW -->
   <div class="mp-panel" id="mp-host-panel">
-    <div class="mp-status" id="mp-host-status">방 생성 중...</div>
-    <div class="mp-step-text" id="mp-host-step">
-      <span class="mp-server-label">서버: </span><span id="mp-host-url-display"></span>
-    </div>
+    <div class="mp-status" id="mp-host-status"></div>
+    <div class="mp-step-text" id="mp-host-step"></div>
     <div class="mp-code-section" id="mp-host-code-section" style="display:none;">
       <label class="mp-code-label">▼ 상대방에게 공유할 방 코드입니다</label>
       <div class="mp-room-code" id="mp-host-code"></div>
       <button class="mp-copy-btn" id="mp-host-copy-btn">📋 복사</button>
     </div>
-    <div class="mp-code-section" id="mp-host-retry-section" style="display:none;">
-      <label class="mp-code-label">▼ 서버 주소 직접 입력</label>
-      <input type="text" class="mp-code-input mp-input-sm" id="mp-host-manual-url" value="1.237.163.231:7650" autocomplete="off" />
-      <button class="mp-apply-btn" id="mp-host-retry-btn">🔄 다시 연결</button>
-    </div>
   </div>
 
-  <!-- GUEST FLOW (Server-based) -->
+  <!-- GUEST FLOW -->
   <div class="mp-panel" id="mp-guest-panel">
-    <div class="mp-status" id="mp-guest-status">호스트의 방 코드를 입력하세요</div>
-    <div class="mp-step-text" id="mp-guest-step">
-      <span class="mp-server-label">서버: </span><span id="mp-guest-url-display"></span>
-    </div>
+    <div class="mp-status" id="mp-guest-status"></div>
+    <div class="mp-step-text" id="mp-guest-step"></div>
     <div class="mp-code-section" id="mp-guest-code-section">
       <label class="mp-code-label">▼ 방 코드 입력 (4자리)</label>
       <input type="text" class="mp-code-input" id="mp-guest-code-input" maxlength="4" placeholder="EX: A3K9" autocomplete="off" />
-      <button class="mp-apply-btn" id="mp-guest-join-btn">✅ 입장</button>
-    </div>
-    <div class="mp-code-section" id="mp-guest-retry-section" style="display:none;">
-      <label class="mp-code-label">▼ 서버 주소 직접 입력</label>
-      <input type="text" class="mp-code-input mp-input-sm" id="mp-guest-manual-url" value="1.237.163.231:7650" autocomplete="off" />
-      <button class="mp-apply-btn" id="mp-guest-retry-btn">🔄 다시 연결</button>
+      <button class="mp-join-btn" id="mp-guest-join-btn">✅ 입장</button>
     </div>
   </div>
 
   <div class="mp-btn-group">
-    <button class="mp-back-btn" id="mp-back">&#x2190; 메인으로</button>
+    <button class="mp-back-btn" id="mp-back-btn">&#x2190; 메인으로</button>
   </div>
 </div>
 
-<!-- GAME SCREEN -->
+<!-- ═══════════════════════════════════════
+     GAME SCREEN
+     ═══════════════════════════════════════ -->
 <div id="game-screen">
   <header>
     <h1>evi's TicTacToe</h1>
@@ -881,6 +816,9 @@ header .subtitle {
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════
+     WIN OVERLAY
+     ═══════════════════════════════════════ -->
 <div id="win-overlay">
   <div class="win-text" id="win-text"></div>
   <div class="overlay-btns">
@@ -889,11 +827,10 @@ header .subtitle {
   </div>
 </div>
 
-
 <script>
-// ═══════════════════════════════════════
-//  CONSTANTS & STATE
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  1. CONSTANTS
+// ═══════════════════════════════════════════════════════════════
 const WIN_SCORE = 10;
 const BOARD_SIZE = 9;
 const BOARD_PADDING = 6;
@@ -906,29 +843,32 @@ const DIRS = [
   { dr: 1, dc: -1 },  // 3: diagonal ↗
 ];
 
+// ═══════════════════════════════════════════════════════════════
+//  2. STATE
+// ═══════════════════════════════════════════════════════════════
 let board = [];
 let scores = { O: 0, X: 0 };
 let current = 'O';
 let status = 'PLAYING';
 
-// Multiplayer state (Server-based)
-let gameMode = 'local';  // 'local' | 'host' | 'guest'
-let myRole = null;        // 'O' (host) | 'X' (guest)
+// Multiplayer state
+let gameMode = 'local';   // 'local' | 'host' | 'guest'
+let myRole = null;         // 'O' (host) | 'X' (guest)
 let isRemoteMove = false;
 let wsConnection = null;
 let mpRoomCode = null;
 const WS_PROTO = location.protocol === 'https:' ? 'wss:' : 'ws:';
 const SERVER_URL = `${WS_PROTO}//${location.host || '127.0.0.1:7650'}`;
 
-// ═══════════════════════════════════════
-//  DOM REFS
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  3. DOM REFS
+// ═══════════════════════════════════════════════════════════════
 const mainScreen     = document.getElementById('main-screen');
 const gameScreen     = document.getElementById('game-screen');
 const btnPlay        = document.getElementById('btn-play');
+const btnMultiplayer = document.getElementById('btn-multiplayer');
 const btnInvite      = document.getElementById('btn-invite');
 const btnShop        = document.getElementById('btn-shop');
-const btnMultiplayer = document.getElementById('btn-multiplayer');
 const boardEl        = document.getElementById('board');
 const msgEl          = document.getElementById('message');
 const turnEl         = document.getElementById('turn-indicator');
@@ -947,7 +887,7 @@ const mpLobby          = document.getElementById('mp-lobby');
 const mpModeSelect     = document.getElementById('mp-mode-select');
 const mpHostPanel      = document.getElementById('mp-host-panel');
 const mpGuestPanel     = document.getElementById('mp-guest-panel');
-const mpBackBtn        = document.getElementById('mp-back');
+const mpBackBtn        = document.getElementById('mp-back-btn');
 const mpCreate         = document.getElementById('mp-create');
 const mpJoin           = document.getElementById('mp-join');
 const mpHostStatus     = document.getElementById('mp-host-status');
@@ -955,16 +895,12 @@ const mpGuestStatus    = document.getElementById('mp-guest-status');
 const mpHostStep       = document.getElementById('mp-host-step');
 const mpGuestStep      = document.getElementById('mp-guest-step');
 
-// ═══════════════════════════════════════
-//  SCREEN NAVIGATION
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  4. SCREEN NAVIGATION
+// ═══════════════════════════════════════════════════════════════
 function showMainScreen() {
   gameScreen.classList.remove('visible');
-  mpLobby.classList.remove('visible');
   mainScreen.classList.remove('hidden');
-  gameMode = 'local';
-  myRole = null;
-  cleanupWebSocket();
 }
 
 function showGameScreen() {
@@ -980,9 +916,22 @@ function showMPLobby() {
   resetMPLobby();
 }
 
-// ═══════════════════════════════════════
-//  GAME LOGIC
-// ═══════════════════════════════════════
+function resetMPLobby() {
+  mpModeSelect.style.display = 'flex';
+  mpHostPanel.classList.remove('visible');
+  mpGuestPanel.classList.remove('visible');
+  mpHostStep.textContent = '';
+  mpGuestStep.textContent = '';
+  document.getElementById('mp-host-code-section').style.display = 'none';
+  document.getElementById('mp-guest-code-section').style.display = 'flex';
+  document.getElementById('mp-guest-code-input').value = '';
+  document.getElementById('mp-server-info').style.display = 'none';
+  cleanupWebSocket();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  5. RENDERING
+// ═══════════════════════════════════════════════════════════════
 function init() {
   board = Array.from({ length: BOARD_SIZE }, () =>
     Array.from({ length: BOARD_SIZE }, () => ({
@@ -1083,8 +1032,16 @@ function drawTripleLine(cells, dirIdx, player) {
   linesSvg.appendChild(line);
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  6. GAME LOGIC
+// ═══════════════════════════════════════════════════════════════
 function handleClick(r, c) {
   if (status === 'GAME_OVER') return;
+
+  // multiplayer: only allow on my turn
+  if (gameMode !== 'local' && !isRemoteMove && current !== myRole) {
+    return;
+  }
 
   if (board[r][c].value !== null) {
     const idx = r * BOARD_SIZE + c;
@@ -1093,11 +1050,6 @@ function handleClick(r, c) {
     void cell.offsetWidth;
     cell.classList.add('shake');
     setTimeout(() => cell.classList.remove('shake'), 250);
-    return;
-  }
-
-  // multiplayer: only allow on my turn
-  if (gameMode !== 'local' && !isRemoteMove && current !== myRole) {
     return;
   }
 
@@ -1194,77 +1146,44 @@ function endGame(winner) {
   }
 }
 
-// ═══════════════════════════════════════
-//  MULTIPLAYER — WebSocket (Server-based)
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  9. MULTIPLAYER — WebSocket Relay
+// ═══════════════════════════════════════════════════════════════
 
-let wsConnectTimer = null;
-
-function resetMPLobby() {
-  mpModeSelect.style.display = 'flex';
-  mpHostPanel.classList.remove('visible');
-  mpGuestPanel.classList.remove('visible');
-  mpHostStep.textContent = '';
-  mpGuestStep.textContent = '';
-  document.getElementById('mp-host-code-section').style.display = 'none';
-  document.getElementById('mp-host-retry-section').style.display = 'none';
-  document.getElementById('mp-guest-code-section').style.display = 'flex';
-  document.getElementById('mp-guest-retry-section').style.display = 'none';
-  document.getElementById('mp-guest-code-input').value = '';
-  document.getElementById('mp-server-info').style.display = 'none';
-  if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
+function connectWebSocket(onOpenCallback) {
   cleanupWebSocket();
-}
 
-// ─── WebSocket Connection ───
-
-function connectWebSocket(onOpenCallback, customUrl) {
-  cleanupWebSocket();
-  if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
-
-  const url = customUrl || SERVER_URL;
-  console.log('[WS] Connecting to', url);
-
-  // Show server URL in lobby
-  const urlDisplay = gameMode === 'host' ? 'mp-host-url-display' : 'mp-guest-url-display';
-  document.getElementById(urlDisplay).textContent = url;
+  const url = SERVER_URL;
   document.getElementById('mp-server-info').style.display = 'flex';
   document.getElementById('mp-server-url').textContent = url;
   document.getElementById('mp-server-dot').className = 'mp-server-dot';
 
   wsConnection = new WebSocket(url);
   let timedOut = false;
-
-  // Connection timeout (5 seconds)
-  wsConnectTimer = setTimeout(() => {
+  const timer = setTimeout(() => {
     timedOut = true;
     if (wsConnection && wsConnection.readyState <= 1) {
       try { wsConnection.close(); } catch(e) {}
     }
-    updateMPStatus('서버 연결 시간 초과 - IP 주소가 맞는지 확인하세요', 'error');
-    showRetrySection();
+    updateMPStatus('서버 연결 시간 초과 — relay.js가 실행 중인지 확인하세요', 'error');
   }, 5000);
 
   wsConnection.onopen = () => {
     if (timedOut) return;
-    if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
-    console.log('[WS] Connected!');
+    clearTimeout(timer);
     document.getElementById('mp-server-dot').className = 'mp-server-dot connected';
     if (onOpenCallback) onOpenCallback();
   };
 
-  wsConnection.onclose = (ev) => {
-    console.log('[WS] Disconnected (code:', ev.code, ')');
-    if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
+  wsConnection.onclose = () => {
+    clearTimeout(timer);
     if (gameMode !== 'local' && !timedOut) {
       updateMPStatus('서버 연결이 끊어졌습니다', 'error');
-      showRetrySection();
     }
   };
 
-  wsConnection.onerror = (ev) => {
+  wsConnection.onerror = () => {
     if (timedOut) return;
-    console.error('[WS] Error');
     document.getElementById('mp-server-dot').className = 'mp-server-dot';
   };
 
@@ -1278,20 +1197,12 @@ function connectWebSocket(onOpenCallback, customUrl) {
   };
 }
 
-function showRetrySection() {
-  const sectionId = gameMode === 'host' ? 'mp-host-retry-section' : 'mp-guest-retry-section';
-  document.getElementById(sectionId).style.display = 'flex';
-}
-
 function cleanupWebSocket() {
-  if (wsConnectTimer) { clearTimeout(wsConnectTimer); wsConnectTimer = null; }
   if (wsConnection) {
     try { wsConnection.close(); } catch(e) {}
     wsConnection = null;
   }
 }
-
-// ─── Server Message Handler ───
 
 function handleServerMessage(msg) {
   switch (msg.type) {
@@ -1348,9 +1259,8 @@ function startAsHost() {
   mpModeSelect.style.display = 'none';
   mpHostPanel.classList.add('visible');
   document.getElementById('mp-host-code-section').style.display = 'none';
-  document.getElementById('mp-host-retry-section').style.display = 'none';
   mpHostStatus.textContent = '서버에 연결 중...';
-  mpHostStep.innerHTML = '<span class="mp-server-label">서버: </span><span id="mp-host-url-display"></span>';
+  mpHostStep.innerHTML = '<span class="mp-server-label">서버: </span><span id="mp-server-url-label">' + SERVER_URL + '</span>';
   mpHostStatus.className = 'mp-status';
 
   connectWebSocket(() => {
@@ -1358,7 +1268,6 @@ function startAsHost() {
     wsConnection.send(JSON.stringify({ type: 'CREATE_ROOM' }));
   });
 
-  // Copy button for room code
   document.getElementById('mp-host-copy-btn').onclick = () => {
     const code = document.getElementById('mp-host-code').textContent;
     navigator.clipboard.writeText(code).then(() => {
@@ -1373,20 +1282,6 @@ function startAsHost() {
       alert('방 코드가 복사되었습니다!');
     });
   };
-
-  // Retry with custom URL
-  document.getElementById('mp-host-retry-btn').onclick = () => {
-    const customUrl = document.getElementById('mp-host-manual-url').value.trim();
-    if (!customUrl) { alert('서버 주소를 입력하세요 (예: 1.237.163.231:7650)'); return; }
-    const wsUrl = customUrl.startsWith('ws://') || customUrl.startsWith('wss://') ? customUrl : `${WS_PROTO}//${customUrl}`;
-    document.getElementById('mp-host-retry-section').style.display = 'none';
-    mpHostStatus.textContent = '서버에 재연결 중...';
-    mpHostStatus.className = 'mp-status';
-    connectWebSocket(() => {
-      mpHostStatus.textContent = '방을 생성하는 중...';
-      wsConnection.send(JSON.stringify({ type: 'CREATE_ROOM' }));
-    }, wsUrl);
-  };
 }
 
 // ─── Guest Flow ───
@@ -1398,12 +1293,10 @@ function startAsGuest() {
   mpModeSelect.style.display = 'none';
   mpGuestPanel.classList.add('visible');
   document.getElementById('mp-guest-code-section').style.display = 'flex';
-  document.getElementById('mp-guest-retry-section').style.display = 'none';
   mpGuestStatus.textContent = '방 코드를 입력하세요';
-  mpGuestStep.innerHTML = '<span class="mp-server-label">서버: </span><span id="mp-guest-url-display"></span>';
+  mpGuestStep.innerHTML = '<span class="mp-server-label">서버: </span><span id="mp-server-url-label">' + SERVER_URL + '</span>';
   mpGuestStatus.className = 'mp-status';
 
-  // Join button
   document.getElementById('mp-guest-join-btn').onclick = () => {
     const code = document.getElementById('mp-guest-code-input').value.trim().toUpperCase();
     if (!code || code.length !== 4) {
@@ -1420,28 +1313,6 @@ function startAsGuest() {
       wsConnection.send(JSON.stringify({ type: 'JOIN_ROOM', payload: { code } }));
     });
   };
-
-  // Retry with custom URL
-  document.getElementById('mp-guest-retry-btn').onclick = () => {
-    const customUrl = document.getElementById('mp-guest-manual-url').value.trim();
-    if (!customUrl) { alert('서버 주소를 입력하세요 (예: 1.237.163.231:7650)'); return; }
-    const wsUrl = customUrl.startsWith('ws://') || customUrl.startsWith('wss://') ? customUrl : `${WS_PROTO}//${customUrl}`;
-    document.getElementById('mp-guest-retry-section').style.display = 'none';
-
-    const code = document.getElementById('mp-guest-code-input').value.trim().toUpperCase();
-    if (code && code.length === 4) {
-      mpGuestStatus.textContent = '서버에 재연결 중...';
-      mpGuestStatus.className = 'mp-status';
-      connectWebSocket(() => {
-        mpGuestStatus.textContent = '방에 입장하는 중...';
-        wsConnection.send(JSON.stringify({ type: 'JOIN_ROOM', payload: { code } }));
-      }, wsUrl);
-    } else {
-      document.getElementById('mp-guest-code-section').style.display = 'flex';
-      mpGuestStatus.textContent = '방 코드를 입력하고 다시 시도하세요';
-      connectWebSocket(null, wsUrl);
-    }
-  };
 }
 
 // ─── Messaging ───
@@ -1450,10 +1321,6 @@ function sendToPeer(msg) {
   if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
     wsConnection.send(JSON.stringify({ type: 'GAME_MESSAGE', payload: msg }));
   }
-}
-
-function sendMove(r, c) {
-  sendToPeer({ type: 'MOVE', payload: { r, c }, ts: Date.now() });
 }
 
 function handlePeerMessage(msg) {
@@ -1516,14 +1383,10 @@ function updateMPStatus(text, cls) {
   }
 }
 
-// ═══════════════════════════════════════
-//  EVENT LISTENERS
-// ═══════════════════════════════════════
-
-// Main screen
+// ═══════════════════════════════════════════════════════════════
+//  7. EVENT LISTENERS
+// ═══════════════════════════════════════════════════════════════
 btnPlay.addEventListener('click', () => {
-  gameMode = 'local';
-  myRole = null;
   init();
   showGameScreen();
 });
@@ -1536,36 +1399,31 @@ btnShop.addEventListener('click', () => {
   // placeholder
 });
 
-btnMultiplayer.addEventListener('click', showMPLobby);
-
-// MP lobby
-mpBackBtn.addEventListener('click', showMainScreen);
-mpCreate.addEventListener('click', startAsHost);
-mpJoin.addEventListener('click', startAsGuest);
-
-// Game controls
 restartBtn.addEventListener('click', showMainScreen);
+
 restartGameBtn.addEventListener('click', () => {
-  if (gameMode !== 'local') {
-    sendToPeer({ type: 'RESTART_REQ', ts: Date.now() });
-    init(); // optimistic restart
-  } else {
-    init();
-  }
-});
-overlayBtn.addEventListener('click', () => {
-  overlayEl.classList.remove('show');
-  if (gameMode !== 'local') {
-    sendToPeer({ type: 'RESTART_REQ', ts: Date.now() });
-  }
   init();
 });
+
+overlayBtn.addEventListener('click', () => {
+  overlayEl.classList.remove('show');
+  init();
+});
+
 overlayMainBtn.addEventListener('click', () => {
   overlayEl.classList.remove('show');
   showMainScreen();
 });
 
-// PWA Service Worker Registration
+// Multiplayer button listeners
+btnMultiplayer.addEventListener('click', showMPLobby);
+mpCreate.addEventListener('click', startAsHost);
+mpJoin.addEventListener('click', startAsGuest);
+mpBackBtn.addEventListener('click', showMainScreen);
+
+// ═══════════════════════════════════════════════════════════════
+//  8. PWA
+// ═══════════════════════════════════════════════════════════════
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/evistictactoe/sw.js')
@@ -1574,7 +1432,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Init
+// Startup
 init();
 </script>
 </body>
